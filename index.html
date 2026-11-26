@@ -1,0 +1,2903 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор мягких окон</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    font-family: Arial, sans-serif;
+    background: #f3f5f7;
+    margin: 0;
+    padding: 18px;
+    color: #222;
+}
+.container { max-width: 1100px; margin: auto; }
+h1, h2, h3 { color: #243447; }
+.card {
+    background: white;
+    padding: 18px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px #00000012;
+}
+.position {
+    border: 1px solid #ddd;
+    padding: 14px;
+    border-radius: 9px;
+    margin-bottom: 13px;
+}
+.position h3 { margin-top: 0; }
+.fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 12px;
+}
+label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+input, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #bbb;
+    border-radius: 6px;
+    font-size: 15px;
+    background: white;
+}
+button {
+    padding: 11px 15px;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 5px 5px 5px 0;
+}
+.primary { background: #1769aa; color: white; }
+.success { background: #23834c; color: white; }
+.secondary { background: #e5edf5; color: #243447; }
+.danger { background: #f8e3e3; color: #a52222; }
+.checkbox-line {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 13px;
+}
+.checkbox-line input { width: auto; }
+.hidden { display: none; }
+.note { color: #666; font-size: 13px; line-height: 1.5; }
+.total {
+    font-size: 23px;
+    font-weight: bold;
+    color: #1769aa;
+    margin-top: 18px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 13px;
+}
+th, td {
+    padding: 9px 6px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+th { background: #edf2f6; }
+.stock-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid #eee;
+}
+.stock-item button { margin: 0; }
+.status {
+    padding: 10px;
+    background: #edf5ff;
+    border-radius: 7px;
+    margin-top: 12px;
+}
+@media(max-width:650px) {
+    body { padding: 9px; }
+    .card { padding: 12px; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 3px; }
+}
+.drawings-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr)); gap:14px; margin:14px 0 22px; }
+.drawing-item { border:1px solid #d9e2ea; border-radius:10px; padding:12px; background:#fff; }
+.drawing-item h3 { margin:0 0 8px; font-size:16px; }
+ .drawing-item svg { width:100%; height:auto; display:block; }
+.drawing-actions {display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px}
+.drawing-actions button {padding:8px 11px; margin:0; font-size:12px}
+@page {size:A4 portrait; margin:8mm}
+@media print {
+ body.print-drawings .container > :not(#result) {display:none!important}
+ body.print-drawings #result > :not(.drawings-grid):not(h2) {display:none!important}
+ body.print-drawings .drawing-actions {display:none!important}
+ body.print-drawings .drawings-grid {display:grid!important;grid-template-columns:1fr 1fr!important;gap:3mm!important}
+ body.print-drawings .drawing-item {height:130mm!important;min-width:0!important;break-inside:avoid!important;page-break-inside:avoid!important;padding:2mm!important}
+ body.print-drawings .drawing-item svg {max-height:95mm!important}
+  body.print-drawings .drawing-item p.note {display:block!important;font-size:9px!important;line-height:1.2!important;overflow-wrap:anywhere}
+ body.print-drawings .drawing-item:nth-child(4n) {break-after:page!important}
+}
+.geometry-invalid { outline:3px solid #c74623 !important; background:#fff6f1 !important; }
+</style>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#1769aa">
+<link rel="icon" href="./icon-192.png">
+</head>
+
+<body>
+<div class="container">
+
+<h1>Калькулятор мягких окон</h1>
+<div class="card" id="pwaPanel"><div id="pwaStatus" class="note" role="status">Подготовка автономного режима…</div><button class="primary" id="pwaInstall" type="button" hidden>Установить приложение</button><div class="note" id="pwaHint">В Chrome открой меню ⋮ → Установить приложение, если кнопка установки не появилась.</div></div>
+
+<div class="card">
+<h2>Параметры монтажа</h2>
+
+<label for="globalBase">Основание для всего заказа</label>
+<select id="globalBase">
+    <option value="wood">Дерево — 500 ₽/м²</option>
+    <option value="metal">Металл — 700 ₽/м²</option>
+    <option value="brick">Кирпич — 800 ₽/м²</option>
+</select>
+
+<div class="checkbox-line">
+    <input type="checkbox" id="differentBases">
+    <label for="differentBases">В заказе разные основания</label>
+</div>
+
+<p class="note">
+Если выключено — общее основание применяется ко всем проёмам.
+</p>
+</div>
+
+<div class="card">
+<h2>Труба-утяжелитель</h2>
+
+<label for="globalPipe">Труба в нижнем кармане</label>
+<select id="globalPipe">
+    <option value="yes">Нужна во всех проёмах</option>
+    <option value="no">Не нужна ни в одном проёме</option>
+</select>
+
+<div class="checkbox-line">
+    <input type="checkbox" id="differentPipes">
+    <label for="differentPipes">В заказе разные варианты</label>
+</div>
+
+<p class="note">
+Если включить разные варианты, у каждого проёма появится
+собственный выбор трубы.
+</p>
+
+<div class="status">
+    Цена трубы: <b>250 ₽/м</b><br>
+    Длина исходной заготовки: <b>6 м</b><br>
+    Оплата: по правилам поставщика, с шагом 3 м.
+</div>
+</div>
+
+<div class="card">
+<h2>Профильная труба «Бокс»</h2>
+
+<label for="globalBox">Бокс для верхней окантовки</label>
+<select id="globalBox">
+    <option value="no">Не нужен ни в одном проёме</option>
+    <option value="yes">Нужен во всех проёмах</option>
+</select>
+
+<div class="checkbox-line">
+    <input type="checkbox" id="differentBoxes">
+    <label for="differentBoxes">В заказе разные варианты</label>
+</div>
+
+<p class="note">Если включить разные варианты, у каждого проёма появится собственный выбор бокса.</p>
+
+<div class="status">
+    Цена бокса: <b>400 ₽/м оплачиваемого метража</b><br>
+    Длина исходной заготовки: <b>6 м</b><br>
+    Оплата и сохранение остатков — по тем же правилам, что и для трубы-утяжелителя.
+</div>
+</div>
+
+<div class="card">
+<button class="secondary" type="button" onclick="toggleGlobalPrices()" aria-expanded="false" id="globalPricesButton">⚙ Изменить цены</button>
+<div id="globalPricesPanel" class="hidden" style="margin-top:12px;">
+<h3>Общие тарифы</h3>
+<p class="note">Цены по умолчанию. Изменения действуют для текущего заказа.</p>
+<div class="fields">
+    <div><label for="pricePvc">ПВХ Crystal, ₽/м²</label><input id="pricePvc" type="number" min="0" step="1" value="1500"></div>
+    <div><label for="priceScreen">Screen, ₽/м²</label><input id="priceScreen" type="number" min="0" step="1" value="2200"></div>
+    <div><label for="zipperPrice">Молния, ₽/пог. м</label><input id="zipperPrice" type="number" min="0" step="1" value="1000"></div>
+    <div><label for="strapPrice">Ремни, ₽/шт.</label><input id="strapPrice" type="number" min="0" step="1" value="100"></div>
+</div>
+<p class="note">Для отдельного проёма можно задать индивидуальную цену через кнопку «Изменить цены проёма».</p>
+</div>
+</div>
+
+<div class="card">
+<h2>Изделия в заказе</h2>
+<div id="positions"></div>
+
+<button class="secondary" onclick="addPosition()">
++ Добавить проём
+</button>
+<button class="primary" onclick="calculate()">
+Рассчитать смету
+</button>
+<button class="danger" onclick="resetCalculator()">
+Очистить заказ
+</button>
+</div>
+
+<div class="card">
+<h2>Склад алюминиевой трубы</h2>
+
+<div id="stockSummary"></div>
+<div id="stockList"></div>
+
+
+<div style="margin-top: 15px;">
+    <button class="secondary" onclick="toggleHistory()">
+        <span id="historyButtonText">Показать историю</span>
+    </button>
+</div>
+
+<div id="historyContainer" style="display:none; margin-top:15px;">
+    <h3>История операций</h3>
+
+    <button class="secondary" onclick="clearHistory()">
+        Очистить историю
+    </button>
+
+<button class="secondary" onclick="exportHistory()">
+    Скачать историю в Excel
+</button>
+
+    <div id="historyList"></div>
+</div>
+
+
+<div class="fields">
+    <div>
+        <button class="primary" onclick="exportStockBackup()">
+            Скачать резервную копию
+        </button>
+    </div>
+    <div>
+        <button class="secondary" onclick="document.getElementById('stockBackupFile').click()">
+            Восстановить склад
+        </button>
+        <input id="stockBackupFile" type="file"
+               accept=".json,application/json"
+               style="display:none"
+               onchange="importStockBackup(event)">
+    </div>
+</div>
+
+
+<h3>Добавить кусок на склад вручную</h3>
+<div class="fields">
+    <div>
+        <label for="manualLength">Длина куска, м</label>
+        <input id="manualLength" type="number"
+               min="0.8" step="0.01" placeholder="Например, 2.5">
+    </div>
+    <div>
+        <label for="manualNote">Примечание</label>
+        <input id="manualNote" type="text"
+               placeholder="Например, объект">
+    </div>
+</div>
+<button class="secondary" onclick="addManualStock()">
+Добавить на склад
+</button>
+<p class="note">
+Куски короче 0,8 м не сохраняются.
+Склад хранится в этом браузере на этом компьютере.
+</p>
+</div>
+
+<div class="card">
+    <h2>Склад профильной трубы «Бокс»</h2>
+    <div id="boxStockSummary"></div>
+    <div id="boxStockList"></div>
+
+    <div style="margin-top:15px;">
+        <button class="secondary" onclick="toggleBoxHistory()">
+            <span id="boxHistoryButtonText">Показать историю бокса</span>
+        </button>
+    </div>
+
+    <div id="boxHistoryContainer" style="display:none; margin-top:15px;">
+        <h3>История операций с боксом</h3>
+        <button class="secondary" onclick="clearBoxHistory()">Очистить историю</button>
+        <button class="secondary" onclick="exportBoxHistory()">Скачать историю в Excel</button>
+        <div id="boxHistoryList"></div>
+    </div>
+
+    <h3>Добавить кусок бокса на склад вручную</h3>
+    <div class="fields">
+        <div>
+            <label for="manualBoxLength">Длина куска, м</label>
+            <input id="manualBoxLength" type="number" min="0.8" step="0.01" placeholder="Например, 2.5">
+        </div>
+        <div>
+            <label for="manualBoxNote">Примечание</label>
+            <input id="manualBoxNote" type="text" placeholder="Например, объект">
+        </div>
+    </div>
+    <button class="secondary" onclick="addManualBoxStock()">Добавить на склад бокса</button>
+    <p class="note">Куски короче 0,8 м не сохраняются. Склад бокса хранится отдельно от алюминиевой трубы.</p>
+</div>
+
+
+<div class="card" id="archiveSection">
+<h2>Архив подтверждённых заказов</h2>
+<p class="note">Заказы, чертежи и параметры сохраняются в памяти этого браузера (IndexedDB), без интернета. Для переноса на другое устройство используй общую резервную копию. Облачная синхронизация пока не подключена.</p>
+<button class="secondary" id="archiveToggle" aria-expanded="false" aria-controls="archivePanel" onclick="toggleArchive()">Показать архив</button>
+<div id="archivePanel" hidden>
+<div class="fields">
+ <div><label for="archiveSearch">Поиск по клиенту, телефону, адресу, номеру заказа</label><input id="archiveSearch" placeholder="Введите запрос" oninput="archivePage=1;renderArchive()"></div>
+ <div><label for="archiveSort">Порядок</label><select id="archiveSort" onchange="archivePage=1;renderArchive()"><option value="new">Сначала новые</option><option value="old">Сначала старые</option></select></div>
+</div>
+<div id="archiveStatus" class="note" style="margin:10px 0"></div>
+<div id="archiveList"></div>
+<div id="archivePages" class="drawing-actions"></div>
+</div>
+<div class="drawing-actions">
+<button class="primary" type="button" onclick="exportCompleteBackup()">Скачать полную резервную копию</button>
+<button class="secondary" type="button" onclick="document.getElementById('completeBackupInput').click()">Восстановить полную копию</button>
+<input id="completeBackupInput" type="file" accept=".json,application/json" style="display:none" onchange="importCompleteBackup(event)">
+</div>
+<p class="note">Восстановление полной копии заменяет текущие заказы, склад и финансовый журнал. Перед восстановлением сохрани текущую копию.</p>
+</div>
+<div class="card" id="financeSection">
+<h2>Заказы и прибыль</h2>
+<p class="note">Заказы появляются после подтверждения сметы. Учитывай реальные поступления и расходы. Прибыль фиксируется после полной оплаты и завершения заказа. Данные сохраняются в этом браузере; синхронизация с CoinKeeper пока не подключена.</p>
+<div class="fields">
+
+<div><label>Период итогов</label><input id="financeMonth" type="month" onchange="renderFinance()"></div>
+</div>
+<div id="financeSummary" class="status"></div>
+<button class="secondary" type="button" id="financeToggle" aria-expanded="false" onclick="toggleFinanceJournal()">Показать финансовый журнал</button>
+<div id="financePanel" hidden>
+<div class="fields"><div><label for="financeSearch">Поиск по клиенту или номеру заказа</label><input id="financeSearch" placeholder="Введите запрос" oninput="resetFinancePage()"></div><div><label for="financeFilter">Фильтр заказов</label><select id="financeFilter" onchange="resetFinancePage()"><option value="all">Все заказы</option><option value="unpaid">Есть задолженность</option><option value="paid">Полностью оплачены</option><option value="closed">Завершённые</option></select></div></div>
+<div id="financeMatches" class="note"></div><div id="financeOrders"></div><div id="financePages" class="drawing-actions"></div></div>
+<button class="secondary" onclick="exportFinanceCSV()">Скачать журнал CSV</button>
+<button class="secondary" onclick="exportFinanceBackup()">Скачать резервную копию финансов</button>
+<button class="secondary" onclick="document.getElementById('financeBackupInput').click()">Восстановить финансы</button>
+<input type="file" id="financeBackupInput" accept=".json,application/json" style="display:none" onchange="importFinanceBackup(event)">
+</div>
+
+<div class="card" id="result">
+<h2>Смета заказа</h2>
+<p>Заполни параметры и нажми «Рассчитать смету».</p>
+</div>
+
+</div>
+
+<script>
+// ЦЕНЫ И ТАРИФЫ
+const prices = {
+    pvc: 1500,
+    screen: 2200
+};
+
+// Тип изделия сохраняется для будущих чертежей, но не влияет на цену.
+
+const basePrices = {
+    wood: 500,
+    metal: 700,
+    brick: 800
+};
+
+const baseNames = {
+    wood: "Дерево",
+    metal: "Металл",
+    brick: "Кирпич"
+};
+
+const materialNames = {
+    pvc: "ПВХ Crystal",
+    screen: "Screen"
+};
+
+const openingNames = {
+    fixed: "Глухое",
+    removable: "Съёмное",
+    roll: "Рулонное"
+};
+
+const PIPE_PRICE = 250;
+const BOX_PRICE = 400;
+
+function safeGetItem(key) {
+    try { return window.localStorage.getItem(key); }
+    catch (error) { return null; }
+}
+function safeSetItem(key, value) {
+    try { window.localStorage.setItem(key, value); return true; }
+    catch (error) {
+        console.warn("Локальное сохранение недоступно:", error);
+        return false;
+    }
+}
+
+const BAR_LENGTH = 6;
+const MIN_STOCK = 0.8;
+
+let positionCounter = 0;
+let currentPlan = null;
+let financeOrders = loadFinanceOrders();
+
+// Загрузка склада из памяти браузера
+function loadStock() {
+    try {
+        return JSON.parse(safeGetItem("softWindowPipeStock")) || [];
+    } catch {
+        return [];
+    }
+}
+
+let stock = loadStock();
+
+// Отдельный склад профильной трубы «Бокс»
+function loadBoxStock() {
+    try {
+        return JSON.parse(safeGetItem("softWindowBoxStock")) || [];
+    } catch {
+        return [];
+    }
+}
+let boxStock = loadBoxStock();
+let boxHistory = [];
+try {
+    boxHistory = JSON.parse(safeGetItem("softWindowBoxHistory") || "[]");
+    if (!Array.isArray(boxHistory)) boxHistory = [];
+} catch {
+    boxHistory = [];
+}
+
+// ИСТОРИЯ ОПЕРАЦИЙ СО СКЛАДОМ
+let history = JSON.parse(
+    safeGetItem("softWindowPipeHistory") || "[]"
+);
+
+// Сохраняем историю в браузере
+function saveHistory() {
+    safeSetItem(
+        "softWindowPipeHistory",
+        JSON.stringify(history)
+    );
+
+    renderHistory();
+}
+
+// Добавляем новую запись в историю
+function addHistory(type, description, details = "") {
+    history.unshift({
+        date: new Date().toLocaleString("ru-RU"),
+        type: type,
+        description: description,
+        details: details
+    });
+
+    saveHistory();
+}
+// ОЧИСТКА ИСТОРИИ ОПЕРАЦИЙ
+function clearHistory() {
+    if (!confirm("Ты действительно хочешь удалить всю историю операций?")) {
+        return;
+    }
+
+    history = [];
+
+    saveHistory();
+
+    alert("История операций очищена.");
+}
+
+// ЭКСПОРТ ИСТОРИИ В EXCEL (CSV)
+function exportHistory() {
+    if (history.length === 0) {
+        alert("История операций пуста.");
+        return;
+    }
+
+    const rows = [
+        ["Дата", "Операция", "Описание", "Подробности"]
+    ];
+
+    history.forEach(item => {
+        rows.push([
+            item.date,
+            item.type,
+            item.description,
+            item.details || ""
+        ]);
+    });
+
+    const csv = "\uFEFF" + rows.map(row =>
+        row.map(value =>
+            '"' + String(value).replace(/"/g, '""') + '"'
+        ).join(";")
+    ).join("\r\n");
+
+    const blob = new Blob(
+        [csv],
+        { type: "text/csv;charset=utf-8;" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "istoriya-operatsiy.csv";
+    link.click();
+
+    URL.revokeObjectURL(url);
+}
+
+// Показываем историю на странице
+function renderHistory() {
+    const container = document.getElementById("historyList");
+
+    if (!container) return;
+
+    if (history.length === 0) {
+        container.innerHTML = "<p>История пока пуста.</p>";
+        return;
+    }
+
+    container.innerHTML = history.map(item => `
+        <div class="card" style="margin-bottom:10px;">
+            <strong>${item.type}</strong>
+            <div>${item.description}</div>
+            <small>${item.date}</small>
+            ${item.details ? `<div>${item.details}</div>` : ""}
+        </div>
+    `).join("");
+}
+
+function saveStock() {
+    safeSetItem("softWindowPipeStock", JSON.stringify(stock));
+    renderStock();
+}
+
+function renderStock() {
+    const total = stock.reduce((sum, item) => sum + item.length, 0);
+
+    document.getElementById("stockSummary").innerHTML = `
+        <p><b>Количество кусков:</b> ${stock.length}</p>
+        <p><b>Общий остаток:</b> ${total.toFixed(2)} м</p>
+    `;
+
+    const list = document.getElementById("stockList");
+
+    if (stock.length === 0) {
+        list.innerHTML = "<p class='note'>Склад пока пуст.</p>";
+        return;
+    }
+
+    list.innerHTML = stock.map((item, index) => `
+        <div class="stock-item">
+            <div>
+                <b>${item.length.toFixed(2)} м</b>
+                <div class="note">${escapeHtml(item.note || "Без примечания")}</div>
+            </div>
+            <button class="danger" onclick="deleteStock(${index})">
+                Удалить
+            </button>
+        </div>
+    `).join("");
+}
+
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+    })[char]);
+}
+
+function addManualStock() {
+    const length = Number(document.getElementById("manualLength").value);
+    const note = document.getElementById("manualNote").value.trim();
+
+    if (!Number.isFinite(length) || length < MIN_STOCK) {
+        alert("Можно добавить кусок длиной от 0,8 м.");
+        return;
+    }
+
+    stock.push({
+        id: Date.now() + Math.random(),
+        length: roundLength(length),
+        note: note || "Добавлено вручную"
+    });
+
+    saveStock();
+addHistory(
+    "Приход",
+    "Добавлен новый кусок алюминиевой трубы",
+    "Длина: " + roundLength(length) + " м"
+);
+
+    document.getElementById("manualLength").value = "";
+    document.getElementById("manualNote").value = "";
+}
+
+// УДАЛЕНИЕ КУСКА СО СКЛАДА
+function deleteStock(index) {
+    if (!confirm("Удалить этот кусок со склада?")) return;
+
+    // Запоминаем длину удаляемого куска
+    const deletedLength = stock[index].length;
+
+    // Удаляем кусок
+    stock.splice(index, 1);
+
+    // Сохраняем склад
+    saveStock();
+
+    // Записываем удаление в историю
+    addHistory(
+        "Удаление",
+        "Кусок удалён со склада",
+        "Длина: " + roundLength(deletedLength) + " м"
+    );
+}
+
+function roundLength(value) {
+    return Math.round(value * 1000) / 1000;
+}
+
+// ОТДЕЛЬНЫЙ СКЛАД И ИСТОРИЯ БОКСА
+function saveBoxStock() {
+    safeSetItem("softWindowBoxStock", JSON.stringify(boxStock));
+    renderBoxStock();
+}
+
+function renderBoxStock() {
+    const total = boxStock.reduce((sum, item) => sum + item.length, 0);
+    document.getElementById("boxStockSummary").innerHTML = `
+        <p><b>Количество кусков:</b> ${boxStock.length}</p>
+        <p><b>Общий остаток:</b> ${total.toFixed(2)} м</p>
+    `;
+    const list = document.getElementById("boxStockList");
+    if (!boxStock.length) {
+        list.innerHTML = "<p class='note'>Склад бокса пока пуст.</p>";
+        return;
+    }
+    list.innerHTML = boxStock.map((item, index) => `
+        <div class="stock-item">
+            <div>
+                <b>${item.length.toFixed(2)} м</b>
+                <div class="note">${escapeHtml(item.note || "Без примечания")}</div>
+            </div>
+            <button class="danger" onclick="deleteBoxStock(${index})">Удалить</button>
+        </div>
+    `).join("");
+}
+
+function saveBoxHistory() {
+    safeSetItem("softWindowBoxHistory", JSON.stringify(boxHistory));
+    renderBoxHistory();
+}
+
+function addBoxHistory(type, description, details = "") {
+    boxHistory.unshift({
+        date: new Date().toLocaleString("ru-RU"),
+        type, description, details
+    });
+    saveBoxHistory();
+}
+
+function renderBoxHistory() {
+    const container = document.getElementById("boxHistoryList");
+    if (!container) return;
+    if (!boxHistory.length) {
+        container.innerHTML = "<p>История операций с боксом пока пуста.</p>";
+        return;
+    }
+    container.innerHTML = boxHistory.map(item => `
+        <div class="card" style="margin-bottom:10px;">
+            <strong>${escapeHtml(item.type)}</strong>
+            <div>${escapeHtml(item.description)}</div>
+            <small>${escapeHtml(item.date)}</small>
+            ${item.details ? `<div>${escapeHtml(item.details)}</div>` : ""}
+        </div>
+    `).join("");
+}
+
+function toggleBoxHistory() {
+    const container = document.getElementById("boxHistoryContainer");
+    const buttonText = document.getElementById("boxHistoryButtonText");
+    if (container.style.display === "none") {
+        renderBoxHistory();
+        container.style.display = "block";
+        buttonText.textContent = "Скрыть историю бокса";
+    } else {
+        container.style.display = "none";
+        buttonText.textContent = "Показать историю бокса";
+    }
+}
+
+function clearBoxHistory() {
+    if (!confirm("Удалить всю историю операций с боксом?")) return;
+    boxHistory = [];
+    saveBoxHistory();
+    alert("История бокса очищена.");
+}
+
+function exportBoxHistory() {
+    if (!boxHistory.length) {
+        alert("История бокса пуста.");
+        return;
+    }
+    const rows = [["Дата", "Операция", "Описание", "Подробности"]];
+    boxHistory.forEach(item => rows.push([
+        item.date, item.type, item.description, item.details || ""
+    ]));
+    const csv = "\\uFEFF" + rows.map(row =>
+        row.map(value => '"' + String(value).replace(/"/g, '""') + '"').join(";")
+    ).join("\\r\\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "istoriya-operatsiy-boks.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+function addManualBoxStock() {
+    const length = Number(document.getElementById("manualBoxLength").value);
+    const note = document.getElementById("manualBoxNote").value.trim();
+    if (!Number.isFinite(length) || length < MIN_STOCK) {
+        alert("Можно добавить кусок бокса длиной от 0,8 м.");
+        return;
+    }
+    boxStock.push({
+        id: Date.now() + Math.random(),
+        length: roundLength(length),
+        note: note || "Добавлено вручную"
+    });
+    saveBoxStock();
+    addBoxHistory("Приход", "Добавлен кусок профильной трубы «Бокс»",
+        "Длина: " + roundLength(length) + " м");
+    document.getElementById("manualBoxLength").value = "";
+    document.getElementById("manualBoxNote").value = "";
+}
+
+function deleteBoxStock(index) {
+    if (!confirm("Удалить этот кусок бокса со склада?")) return;
+    const deletedLength = boxStock[index].length;
+    boxStock.splice(index, 1);
+    saveBoxStock();
+    addBoxHistory("Удаление", "Кусок бокса удалён со склада",
+        "Длина: " + roundLength(deletedLength) + " м");
+}
+
+// ДОБАВЛЕНИЕ ПРОЁМОВ
+function addPosition() {
+    positionCounter++;
+
+    const position = document.createElement("div");
+    position.className = "position";
+
+    position.innerHTML = `
+        <h3>Проём №${positionCounter}</h3>
+
+        <div class="fields">
+            <div>
+                <label>Ширина, мм</label>
+                <input class="width" type="number" min="1"
+                       placeholder="Например, 1500">
+            </div>
+
+            <div>
+                <label>Высота, мм</label>
+                <input class="height" type="number" min="1"
+                       placeholder="Например, 2000">
+            </div>
+
+            <div>
+                <label>Форма окна</label>
+                <select class="window-shape" onchange="updateShapeFields(this)">
+                    <option value="rectangle">Прямоугольник</option>
+                    <option value="trapezoid">Трапеция</option>
+                    <option value="arbitrary">Произвольный четырёхугольник</option>
+                </select>
+            </div>
+            <div class="shape-fields hidden">
+                <label>Высота правого края, мм</label>
+                <input class="right-height" type="number" min="1" step="1" placeholder="Например, 1800">
+            </div>
+            <div class="shape-fields hidden">
+                <label>Горизонтальная сторона</label>
+                <select class="horizontal-side">
+                    <option value="bottom">Снизу (уклон крыши)</option>
+                    <option value="top">Сверху (уклон пола)</option>
+                </select>
+            </div>
+            <div class="arbitrary-fields hidden" style="grid-column:1/-1; background:#eef5fc; padding:12px; border-radius:9px">
+              <b>Отклонения по лазерному уровню, мм</b>
+              <p class="note">Длины сторон измеряются рулеткой по фактическому наклону. Для отклонений вводи знак + или −.</p>
+              <div class="grid" style="margin-top:8px">
+                <div><label>Нижняя сторона: правая точка выше (+) / ниже (−)</label><input class="dev-bottom" type="number" step="1" value="0"></div>
+                <div><label>Верхняя сторона: правая точка выше (+) / ниже (−)</label><input class="dev-top" type="number" step="1" value="0"></div>
+                <div><label>Левая сторона: верхняя точка правее (+) / левее (−)</label><input class="dev-left" type="number" step="1" value="0"></div>
+                <div><label>Правая сторона: верхняя точка правее (+) / левее (−)</label><input class="dev-right" type="number" step="1" value="0"></div>
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:bold"><input type="checkbox" class="approx-mode" style="width:auto;min-width:18px;height:18px"> Замеры с погрешностью (предварительный расчёт)</label>
+              <p class="note">Если отклонения неточные, калькулятор покажет расхождение и построит предварительный контур по фактическим длинам сторон и трём отклонениям. Перед раскроем необходимо перепроверить замеры.</p>
+              <div class="geometry-feedback" role="alert" aria-live="assertive" tabindex="-1" style="display:none;background:#fff4df;border:2px solid #c87b19;border-radius:8px;padding:12px;margin-top:10px"></div>
+              <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:bold">Как обозначать + и − на замерах? (схема-подсказка)</summary>
+                <svg viewBox="0 0 560 245" style="max-width:100%;background:white;border-radius:8px;margin-top:9px" xmlns="http://www.w3.org/2000/svg">
+                  <g font-family="Arial" font-size="13" fill="#243447"><text x="12" y="23" font-weight="bold">Горизонтальные стороны</text><text x="295" y="23" font-weight="bold">Вертикальные стороны</text></g>
+                  <g stroke="#8997a4" stroke-width="1.5" stroke-dasharray="5 5"><path d="M 15 65 H 250 M 15 165 H 250 M 345 45 V 115 M 460 145 V 220"/></g>
+                  <g stroke="#1769aa" stroke-width="4" fill="none"><path d="M 35 82 L 220 46 M 35 151 L 220 187 M 345 110 L 380 48 M 460 215 L 425 150"/></g>
+                  <g fill="#b83e2d" font-family="Arial" font-weight="bold" font-size="15"><text x="100" y="47">+ (справа выше)</text><text x="100" y="210">− (справа ниже)</text><text x="385" y="82">+ (вправо)</text><text x="310" y="237">− (влево)</text></g>
+                </svg>
+                <p class="note">Пунктир — горизонталь или вертикаль лазерного уровня. Синий — сторона изделия. Знак всегда определяется относительно левой или нижней точки.</p>
+              </details>
+            </div>
+            <div>
+                <label>Количество</label>
+                <input class="quantity" type="number"
+                       min="1" step="1" value="1">
+            </div>
+
+            <div>
+                <label>Материал</label>
+                <select class="material">
+                    <option value="pvc">ПВХ Crystal</option>
+                    <option value="screen">Screen</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Отлив по нижнему краю</label>
+                <select class="drip" onchange="updateDripFields(this)">
+                    <option value="no">Без отлива</option>
+                    <option value="yes">С отливом</option>
+                </select>
+            </div>
+
+            <div class="drip-fields hidden">
+                <label>Ширина отлива, мм</label>
+                <input class="drip-width" type="number" min="1" step="1" value="50">
+            </div>
+
+            <div class="position-price-field hidden">
+                <label>Индивидуальная цена, ₽/м²</label>
+                <input class="custom-price" type="number" min="0" step="1" placeholder="По общему тарифу">
+            </div>
+
+            <div>
+                <label>Тип изделия</label>
+                <select class="opening" onchange="updateEyeletFields(this); markDrawingStale()">
+                    <option value="fixed">Глухое</option>
+                    <option value="removable">Съёмное</option>
+                    <option value="roll" selected>Рулонное</option>
+                </select>
+            </div>
+
+            <div class="border-settings" style="grid-column:1/-1;">
+                <label><b>Ширина окантовки, мм</b> (подписи на чертеже — только числа)</label>
+                <div class="fields">
+                    <div><label>Слева</label><input class="border-left" type="number" min="1" step="1" value="50"></div>
+                    <div><label>Справа</label><input class="border-right" type="number" min="1" step="1" value="50"></div>
+                    <div><label>Сверху</label><input class="border-top" type="number" min="1" step="1" value="50" oninput="markBorderManual(this)"></div>
+                    <div><label>Снизу</label><input class="border-bottom" type="number" min="1" step="1" value="50" oninput="markBorderManual(this)"></div>
+                </div>
+            </div>
+            <div class="lower-eyelets-field hidden" style="grid-column:1/-1;">
+                <label class="checkbox-line"><input class="lower-eyelets" type="checkbox"> Добавить люверсы на нижнюю окантовку</label>
+            </div>
+
+            <div>
+                <label>Количество молний на одно окно</label>
+                <input class="zipper-count" type="number" min="0" step="1" value="0" oninput="updateZipperCount(this)">
+            </div>
+
+            <div class="zipper-items" style="grid-column:1/-1;"></div>
+
+            <div>
+                <label>Ремни для фиксации рулона</label>
+                <select class="straps" onchange="updateStrapFields(this)">
+                    <option value="no">Не нужны</option>
+                    <option value="yes">Нужны</option>
+                </select>
+            </div>
+
+            <div class="strap-fields hidden">
+                <label>Количество ремней на одно окно (пусто = автоматически)</label>
+                <input class="strap-count" type="number" min="0" step="1" placeholder="Автоматический расчёт">
+            </div>
+            <div class="strap-fields position-price-field hidden">
+                <label>Цена ремня, ₽/шт. (пусто = общий тариф)</label>
+                <input class="strap-custom-price" type="number" min="0" step="1" placeholder="По общему тарифу">
+            </div>
+
+            <div class="individual-base hidden">
+                <label>Основание монтажа</label>
+                <select class="base">
+                    <option value="wood">Дерево — 500 ₽/м²</option>
+                    <option value="metal">Металл — 700 ₽/м²</option>
+                    <option value="brick">Кирпич — 800 ₽/м²</option>
+                </select>
+            </div>
+
+            <div class="individual-pipe hidden">
+                <label>Труба-утяжелитель</label>
+                <select class="pipe">
+                    <option value="yes">Нужна</option>
+                    <option value="no">Не нужна</option>
+                </select>
+            </div>
+
+            <div class="individual-box hidden">
+                <label>Бокс для верхней окантовки</label>
+                <select class="box">
+                    <option value="yes">Нужен</option>
+                    <option value="no">Не нужен</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="secondary" type="button" onclick="togglePositionPrices(this)" aria-expanded="false">Изменить цены проёма</button>
+        <button class="danger" onclick="removePosition(this)">
+            Удалить проём
+        </button>
+    `;
+
+    document.getElementById("positions").appendChild(position);
+    updateModes();
+    updateEyeletFields(position.querySelector(".opening"));
+}
+
+function updateEyeletFields(select) {
+    const position = select.closest(".position");
+    const field = position.querySelector(".lower-eyelets-field");
+    field.classList.toggle("hidden", select.value === "fixed");
+    if (select.value === "fixed") position.querySelector(".lower-eyelets").checked = false;
+}
+
+// Количество ремней на одно окно. При отсутствии трубы: 1 на каждые
+// начатые 0,7 м ширины, но минимум 2. С трубой: 2 до 2,5 м,
+// затем +1 на каждый начатый метр сверх 2,5 м.
+function automaticStrapCount(widthM, hasPipe) {
+    if (!hasPipe) return Math.max(2, Math.ceil((widthM - 1e-9) / 0.7));
+    return 2 + Math.max(0, Math.ceil((widthM - 2.5 - 1e-9) / 1));
+}
+
+function toggleGlobalPrices() {
+    const panel = document.getElementById("globalPricesPanel");
+    const button = document.getElementById("globalPricesButton");
+    const opened = panel.classList.toggle("hidden") === false;
+    button.textContent = opened ? "Скрыть настройки цен" : "⚙ Изменить цены";
+    button.setAttribute("aria-expanded", String(opened));
+}
+
+function togglePositionPrices(button) {
+    const position = button.closest(".position");
+    const opened = position.dataset.pricesOpen !== "true";
+    position.dataset.pricesOpen = String(opened);
+    button.textContent = opened ? "Скрыть цены проёма" : "Изменить цены проёма";
+    button.setAttribute("aria-expanded", String(opened));
+    updatePositionPriceFields(position);
+    position.querySelectorAll(".zipper-item-price-wrap").forEach(field => {
+        field.classList.toggle("hidden", !opened);
+    });
+}
+
+function updatePositionPriceFields(position) {
+    const opened = position.dataset.pricesOpen === "true";
+    const strapsOn = position.querySelector(".straps").value === "yes";
+    position.querySelectorAll(".position-price-field").forEach(field => {
+        const relevant = field.classList.contains("strap-fields") ? strapsOn : true;
+        field.classList.toggle("hidden", !opened || !relevant);
+    });
+}
+
+// Отлив влияет только на площадь изготовления, но не на монтаж.
+function updateDripFields(select) {
+    const position = select.closest(".position");
+    position.querySelector(".drip-fields").classList.toggle("hidden", select.value !== "yes");
+}
+
+function updateStrapFields(select) {
+    const position = select.closest(".position");
+    position.querySelectorAll(".strap-fields:not(.position-price-field)").forEach(field => {
+        field.classList.toggle("hidden", select.value !== "yes");
+    });
+    updatePositionPriceFields(position);
+}
+
+// Создаём столько отдельных полей молний, сколько указано для одного окна.
+// Длина каждой по умолчанию равна высоте окна, индивидуальные цены скрыты.
+function updateZipperCount(input) {
+    const position = input.closest(".position");
+    const container = position.querySelector(".zipper-items");
+    const count = Number(input.value);
+    if (!Number.isInteger(count) || count < 0 || count > 1000) return;
+    while (container.children.length > count) container.lastElementChild.remove();
+    while (container.children.length < count) {
+        const index = container.children.length + 1;
+        const item = document.createElement("div");
+        item.className = "zipper-item";
+        item.style.cssText = "padding:10px 12px;margin:6px 0;border:1px solid #ddd;border-radius:8px;";
+        item.innerHTML = `
+            <strong>Молния №${index}</strong>
+            <div class="fields" style="margin-top:8px;">
+                <div>
+                    <label>Длина, мм (пусто = высота окна)</label>
+                    <input class="zipper-item-length" type="number" min="1" step="1" placeholder="По высоте окна">
+                </div>
+                <div>
+                    <label>Расположение молнии</label>
+                    <select class="zipper-item-side" onchange="updateZipperPlacement(this)">
+                        <option value="center">По центру</option>
+                        <option value="left">Слева</option>
+                        <option value="right">Справа</option>
+                    </select>
+                </div>
+                <div class="zipper-item-offset-wrap hidden">
+                    <label>Отступ от внешнего края, мм (пусто = рядом с окантовкой)</label>
+                    <input class="zipper-item-offset" type="number" min="0" step="1" placeholder="Автоматически">
+                </div>
+                <div>
+                    <label>Дополнительный люверс Ø10 у молнии (на нижней окантовке)</label>
+                    <select class="zipper-extra-eyelet">
+                        <option value="none">Не нужен</option>
+                        <option value="left">Слева от молнии</option>
+                        <option value="right">Справа от молнии</option>
+                        <option value="both">С обеих сторон</option>
+                    </select>
+                </div>
+                <div class="zipper-item-price-wrap hidden">
+                    <label>Цена, ₽/пог. м (пусто = общий тариф)</label>
+                    <input class="zipper-item-price" type="number" min="0" step="1" placeholder="По общему тарифу">
+                </div>
+            </div>`;
+        container.appendChild(item);
+    }
+    const pricesOpen = position.dataset.pricesOpen === "true";
+    container.querySelectorAll(".zipper-item-price-wrap").forEach(field => {
+        field.classList.toggle("hidden", !pricesOpen);
+    });
+}
+
+function updateZipperPlacement(select) {
+    const item = select.closest(".zipper-item");
+    item.querySelector(".zipper-item-offset-wrap").classList.toggle("hidden", select.value === "center");
+}
+
+function removePosition(button) {
+    if (document.querySelectorAll("#positions > .position").length <= 1) {
+        alert("В заказе должен остаться хотя бы один проём.");
+        return;
+    }
+
+    button.closest(".position").remove();
+    renumberPositions();
+}
+
+function renumberPositions() {
+    document.querySelectorAll("#positions > .position").forEach((position, index) => {
+        position.querySelector("h3").textContent = `Проём №${index + 1}`;
+    });
+}
+
+function updateShapeFields(select) {
+    const position = select.closest(".position");
+    position.querySelectorAll(".shape-fields").forEach(field =>
+        field.classList.toggle("hidden", select.value === "rectangle"));
+    const heightLabel = position.querySelector(".height").previousElementSibling;
+    position.querySelectorAll(".arbitrary-fields").forEach(field => field.classList.toggle("hidden", select.value !== "arbitrary"));
+    heightLabel.textContent = select.value !== "rectangle" ? "Высота левого края, мм" : "Высота, мм";
+}
+
+// Автоматические размеры карманов, пока пользователь не изменил их вручную.
+function markBorderManual(input) {
+    input.dataset.manual = "true";
+}
+function updatePocketBorders() {
+    const differentPipes = document.getElementById("differentPipes").checked;
+    const differentBoxes = document.getElementById("differentBoxes").checked;
+    document.querySelectorAll("#positions > .position").forEach(position => {
+        const pipe = differentPipes ? position.querySelector(".pipe").value : document.getElementById("globalPipe").value;
+        const box = differentBoxes ? position.querySelector(".box").value : document.getElementById("globalBox").value;
+        const top = position.querySelector(".border-top");
+        const bottom = position.querySelector(".border-bottom");
+        if (top.dataset.manual !== "true") top.value = box === "yes" ? "80" : "50";
+        if (bottom.dataset.manual !== "true") bottom.value = pipe === "yes" ? "60" : "50";
+    });
+}
+
+function updateModes() {
+    const differentBases = document.getElementById("differentBases").checked;
+    const differentPipes = document.getElementById("differentPipes").checked;
+    const differentBoxes = document.getElementById("differentBoxes").checked;
+
+    document.querySelectorAll(".individual-base").forEach(block => {
+        block.classList.toggle("hidden", !differentBases);
+    });
+
+    document.querySelectorAll(".individual-pipe").forEach(block => {
+        block.classList.toggle("hidden", !differentPipes);
+    });
+
+    document.querySelectorAll(".individual-box").forEach(block => {
+        block.classList.toggle("hidden", !differentBoxes);
+    });
+    updatePocketBorders();
+}
+
+document.getElementById("differentBases").addEventListener("change", updateModes);
+document.getElementById("differentPipes").addEventListener("change", updateModes);
+document.getElementById("differentBoxes").addEventListener("change", updateModes);
+document.getElementById("globalPipe").addEventListener("change", updatePocketBorders);
+document.getElementById("globalBox").addEventListener("change", updatePocketBorders);
+document.getElementById("positions").addEventListener("change", event => {
+    if (event.target.matches(".pipe, .box")) updatePocketBorders();
+});
+
+
+
+// ПОКАЗАТЬ ИЛИ СКРЫТЬ ИСТОРИЮ
+function toggleHistory() {
+    const container = document.getElementById("historyContainer");
+    const buttonText = document.getElementById("historyButtonText");
+
+    if (container.style.display === "none") {
+
+        // Обновляем содержимое истории перед показом
+        renderHistory();
+
+        container.style.display = "block";
+        buttonText.textContent = "Скрыть историю";
+
+    } else {
+        container.style.display = "none";
+        buttonText.textContent = "Показать историю";
+    }
+}
+// СКАЧИВАНИЕ РЕЗЕРВНОЙ КОПИИ СКЛАДА И ИСТОРИИ
+function exportStockBackup() {
+    const backup = {
+        version: 1,
+        createdAt: new Date().toISOString(),
+        stock: stock,
+        history: history,
+        boxStock: boxStock,
+        boxHistory: boxHistory
+    };
+
+    const blob = new Blob(
+        [JSON.stringify(backup, null, 2)],
+        { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "rezervnaya-kopiya-skladov.json";
+    link.click();
+
+    URL.revokeObjectURL(url);
+}
+// ВОССТАНОВЛЕНИЕ СКЛАДА И ИСТОРИИ ИЗ РЕЗЕРВНОЙ КОПИИ
+function importStockBackup(event) {
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function() {
+        try {
+            const backup = JSON.parse(reader.result);
+
+            if (
+                backup.version !== 1 ||
+                !Array.isArray(backup.stock) ||
+                !backup.stock.every(item =>
+                    item &&
+                    (typeof item.id === "string" ||
+                     typeof item.id === "number") &&
+                    Number.isFinite(item.length) &&
+                    item.length >= MIN_STOCK
+                )
+            ) {
+                throw new Error("Неверный формат резервной копии");
+            }
+
+            // Проверяем историю, если она есть в копии
+            const restoredHistory = backup.history ?? [];
+
+            if (
+                !Array.isArray(restoredHistory) ||
+                !restoredHistory.every(item =>
+                    item &&
+                    typeof item.date === "string" &&
+                    typeof item.type === "string" &&
+                    typeof item.description === "string"
+                )
+            ) {
+                throw new Error("Неверный формат истории");
+            }
+
+            // Поля бокса необязательны для совместимости со старыми копиями.
+            const restoredBoxStock = backup.boxStock === undefined ? boxStock : backup.boxStock;
+            const restoredBoxHistory = backup.boxHistory === undefined ? boxHistory : backup.boxHistory;
+
+            if (
+                !Array.isArray(restoredBoxStock) ||
+                !restoredBoxStock.every(item =>
+                    item &&
+                    (typeof item.id === "string" || typeof item.id === "number") &&
+                    Number.isFinite(item.length) &&
+                    item.length >= MIN_STOCK
+                )
+            ) {
+                throw new Error("Неверный формат склада бокса");
+            }
+
+            if (
+                !Array.isArray(restoredBoxHistory) ||
+                !restoredBoxHistory.every(item =>
+                    item &&
+                    typeof item.date === "string" &&
+                    typeof item.type === "string" &&
+                    typeof item.description === "string"
+                )
+            ) {
+                throw new Error("Неверный формат истории бокса");
+            }
+
+            if (!confirm(
+                "Заменить текущий склад и историю данными из резервной копии?"
+            )) {
+                return;
+            }
+
+            // Восстанавливаем склад
+            stock = backup.stock;
+            saveStock();
+
+            // Восстанавливаем историю
+            history = restoredHistory;
+            saveHistory();
+
+            boxStock = restoredBoxStock;
+            safeSetItem("softWindowBoxStock", JSON.stringify(boxStock));
+            boxHistory = restoredBoxHistory;
+            saveBoxHistory();
+
+            renderStock();
+            renderHistory();
+            renderBoxStock();
+            renderBoxHistory();
+
+            alert("Склады алюминиевой трубы и бокса, а также их истории успешно восстановлены!");
+
+        } catch (error) {
+            alert("Не удалось восстановить резервную копию. Проверь файл.");
+        }
+
+        event.target.value = "";
+    };
+
+    reader.readAsText(file);
+}
+// ПОДБОР СКЛАДСКИХ КУСКОВ
+function planCuttingFor(requiredLengths, sourceStock, materialPrice, materialName) {
+    // Работаем с копией выбранного склада. Реальный склад пока не меняем.
+    let virtualStock = sourceStock.map(item => ({
+        id: item.id,
+        length: item.length,
+        note: item.note
+    }));
+
+    const pieces = requiredLengths
+        .map((length, index) => ({ length, index }))
+        .sort((a, b) => b.length - a.length);
+
+    const assignments = [];
+    const newPieces = [];
+
+    for (const piece of pieces) {
+        // Выбираем самый короткий подходящий складской кусок.
+        const candidates = virtualStock
+            .map((item, index) => ({
+                item,
+                index,
+                remaining: roundLength(item.length - piece.length)
+            }))
+            .filter(candidate => candidate.remaining >= -0.0001)
+            .sort((a, b) => a.remaining - b.remaining);
+
+        if (candidates.length > 0) {
+            const chosen = candidates[0];
+            const oldLength = chosen.item.length;
+            const remaining = Math.max(0, chosen.remaining);
+
+            assignments.push({
+                pieceLength: piece.length,
+                source: "Склад",
+                oldLength,
+                remaining
+            });
+
+            virtualStock.splice(chosen.index, 1);
+
+            if (remaining >= MIN_STOCK) {
+                virtualStock.push({
+                    id: chosen.item.id,
+                    length: remaining,
+                    note: chosen.item.note
+                });
+            }
+        } else {
+            newPieces.push(piece.length);
+        }
+    }
+
+    // Раскладываем новые детали по шестиметровым заготовкам.
+    // Применяем best-fit decreasing: выбираем заготовку,
+    // в которой после размещения останется меньше всего места.
+    const bars = [];
+
+    for (const length of newPieces) {
+        let bestBar = -1;
+        let smallestRemainder = Infinity;
+
+        for (let i = 0; i < bars.length; i++) {
+            const remainder = roundLength(bars[i].remaining - length);
+
+            if (remainder >= -0.0001 && remainder < smallestRemainder) {
+                bestBar = i;
+                smallestRemainder = remainder;
+            }
+        }
+
+        if (bestBar >= 0) {
+            bars[bestBar].pieces.push(length);
+            bars[bestBar].used = roundLength(bars[bestBar].used + length);
+            bars[bestBar].remaining = Math.max(0, smallestRemainder);
+        } else {
+            if (length > BAR_LENGTH) {
+                throw new Error("Отрезок длиннее 6 метров. Нужна отдельная проверка.");
+            }
+
+            bars.push({
+                pieces: [length],
+                used: length,
+                remaining: roundLength(BAR_LENGTH - length)
+            });
+        }
+    }
+
+    // Расчёт оплаты по каждой новой шестиметровой заготовке.
+    // Если остаток меньше 3 м — оплачивается вся шестиметровая труба.
+    // Если остаток 3 м или больше — его можно оставить продавцу,
+    // оплачивая только использованные 3 м.
+    let paidMeters = 0;
+    const newStock = [];
+
+    bars.forEach((bar, index) => {
+        const remainder = roundLength(bar.remaining);
+
+        if (remainder < 3) {
+            paidMeters += 6;
+
+            if (remainder >= MIN_STOCK) {
+                newStock.push({
+                    length: remainder,
+                    note: "Остаток от новой заготовки " + materialName + " №" + (index + 1)
+                });
+            }
+        } else {
+            paidMeters += 3;
+        }
+    });
+
+    return {
+        assignments,
+        virtualStock,
+        bars,
+        newStock,
+        paidMeters,
+        pipeCost: paidMeters * materialPrice
+    };
+}
+
+// Сохраняем прежний вызов и тариф алюминиевой трубы без изменений.
+function planCutting(requiredLengths) {
+    return planCuttingFor(requiredLengths, stock, PIPE_PRICE, "трубы-утяжелителя");
+}
+
+// Числовые размеры — поверх графики, с белой подложкой для читаемости.
+function drawingNumber(text, x, y, rotate=0, fontSize=11) {
+    const str=String(text);
+    const width=Math.max(18,str.length*fontSize*.66+8);
+    const height=fontSize+6;
+    return `<g transform="translate(${x} ${y}) rotate(${rotate})"><text x="0" y="0" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="${fontSize}" fill="#163a58" paint-order="stroke" stroke="#ffffff" stroke-width="0.7" stroke-linejoin="round">${str}</text></g>`;
+}
+// Унифицированный поиск свободного места для размерных надписей.
+function freeBorderLabelFraction(zippers, widthMm) {
+    const candidates=[.72,.28,.84,.16,.60,.40,.93,.07];
+    const occupied=zippers.map(z=>z.side==='center'? .5 : z.side==='left' ? (z.offsetMm==null? .1:z.offsetMm/widthMm) : (z.offsetMm==null?.9:1-z.offsetMm/widthMm));
+    return candidates.find(t=>occupied.every(v=>Math.abs(t-v)>.13))||.72;
+}
+function pickDrawingLabel(candidates, obstacles, horizontal=true) {
+    // Приоритет — отсутствие пересечений с люверсами, молниями и размерными линиями.
+    const score=p=>obstacles.reduce((sum,o)=>{
+        const dx=Math.abs(p.x-o.x),dy=Math.abs(p.y-o.y);
+        const rx=(o.rx||7)+(horizontal?14:8),ry=(o.ry||7)+(horizontal?8:15);
+        return sum+(dx<rx&&dy<ry ? 100+(rx-dx)+(ry-dy):0);
+    },0);
+    return candidates.reduce((best,p)=>score(p)<score(best)?p:best,candidates[0]);
+}
+function uniformEyeletSize(vertical) {
+    return vertical ? {rx:2.6,ry:4.4} : {rx:4.4,ry:2.6};
+}
+// ЧЕРТЁЖ С ОКАНТОВКОЙ, МОЛНИЯМИ И ОТЛИВОМ
+
+function zipperExtraEyelets(zx, bottomY, borderDepth, scale, option, leftLimit, rightLimit) {
+    if (!option || option === 'none') return '';
+    const cy = bottomY - borderDepth / 2;
+    const radius = Math.max(2.1, Math.min(4, borderDepth * .19));
+    const offset = 50 * scale;
+    const signs = option === 'both' ? [-1,1] : option === 'left' ? [-1] : [1];
+    return signs.map(sign => {
+        const cx = zx + sign * offset;
+        if (cx - radius <= leftLimit || cx + radius >= rightLimit) return '';
+        const labelX = cx + (sign < 0 ? -18 : 18), labelY = cy - 23;
+        return `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="white" stroke="#163a58" stroke-width="1.4"/><path d="M ${labelX} ${labelY+3} L ${cx+sign*radius*.6} ${cy-radius*.7}" fill="none" stroke="#163a58" stroke-width="1"/><text x="${labelX}" y="${labelY}" text-anchor="middle" font-size="11" fill="#163a58">Ø10</text>`;
+    }).join('');
+}
+
+function drawingZigzag(a,b,amplitude=2.4,spacing=5) {
+    const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
+    if(length<1) return '';
+    const count=Math.max(8,Math.ceil(length/spacing));
+    const nx=-dy/length,ny=dx/length;
+    let d=`M ${a.x.toFixed(2)} ${a.y.toFixed(2)}`;
+    for(let i=1;i<=count;i++) {
+        const t=i/count,off=i===count?0:(i%2?amplitude:-amplitude);
+        d+=` L ${(a.x+dx*t+nx*off).toFixed(2)} ${(a.y+dy*t+ny*off).toFixed(2)}`;
+    }
+    return `<path d="${d}" stroke="#bd4b39" stroke-width="1.6" fill="none"/>`;
+}
+
+function makeOpeningDrawing(number, widthMm, heightMm, quantity, zippersData = [], dripWidthMm = 0, openingType = "fixed", bordersMm = {left:50,right:50,top:50,bottom:50}, lowerEyelets = false, hasBox = false, hasPipe = false, shape = "rectangle", rightHeightMm = heightMm, horizontalSide = "bottom", customGeometry = null) {
+    if (shape === "arbitrary" && customGeometry) return makeArbitraryDrawing(number,widthMm,heightMm,rightHeightMm,quantity,zippersData,dripWidthMm,openingType,bordersMm,lowerEyelets,hasBox,hasPipe,customGeometry);
+    const maxHeight = Math.max(heightMm, rightHeightMm);
+    const scale = Math.min(440 / widthMm, 275 / maxHeight);
+    const rectW = widthMm * scale, maxH = maxHeight * scale;
+    const x = 90 + (440 - rectW) / 2, y = 70 + (275 - maxH) / 2;
+    const leftH = heightMm * scale, rightH = rightHeightMm * scale;
+    const leftTop = horizontalSide === "top" ? y : y + maxH - leftH;
+    const rightTop = horizontalSide === "top" ? y : y + maxH - rightH;
+    const leftBottom = leftTop + leftH, rightBottom = rightTop + rightH;
+    const topAt = t => leftTop + (rightTop - leftTop) * t;
+    const bottomAt = t => leftBottom + (rightBottom - leftBottom) * t;
+    const point = (px,py) => `${px.toFixed(2)} ${py.toFixed(2)}`;
+    const outline = `M ${point(x,leftTop)} L ${point(x+rectW,rightTop)} L ${point(x+rectW,rightBottom)} L ${point(x,leftBottom)} Z`;
+    const visualBorderScale = 2;
+    const lB = Math.min(bordersMm.left * scale * visualBorderScale, rectW * .32);
+    const rB = Math.min(bordersMm.right * scale * visualBorderScale, rectW * .32);
+    const tB = Math.min(bordersMm.top * scale * visualBorderScale, Math.min(leftH,rightH) * .32);
+    const bB = Math.min(bordersMm.bottom * scale * visualBorderScale, Math.min(leftH,rightH) * .32);
+    const innerL = lB / rectW, innerR = 1-rB / rectW;
+    const inner = `M ${point(x+lB,topAt(innerL)+tB)} L ${point(x+rectW-rB,topAt(innerR)+tB)} L ${point(x+rectW-rB,bottomAt(innerR)-bB)} L ${point(x+lB,bottomAt(innerL)-bB)} Z`;
+    function eyeletLine(side) {
+        const vertical = side === "left" || side === "right";
+        const spanMm = vertical ? (side === "left" ? heightMm : rightHeightMm) : widthMm;
+        const count = Math.max(2, Math.ceil(spanMm / 350) + 1);
+        const band = side === "left" ? lB : side === "right" ? rB : side === "top" ? tB : bB;
+        const {rx,ry}=uniformEyeletSize(vertical);
+        return Array.from({length:count},(_,i)=>{
+            const t = .07 + .86*i/(count-1);
+            const cx = vertical ? (side === "left" ? x+lB/2 : x+rectW-rB/2) : x+rectW*t;
+            const cy = vertical ? (side === "left" ? leftTop+leftH*t : rightTop+rightH*t) : (side === "top" ? topAt(t)+tB/2 : bottomAt(t)-bB/2);
+            return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="white" stroke="#45647c" stroke-width="1.2"/>`;
+        }).join("");
+    }
+    const eyelets = openingType === "fixed" ? "" : eyeletLine("left")+eyeletLine("right")+(openingType === "removable" ? eyeletLine("top") : "")+(lowerEyelets ? eyeletLine("bottom") : "");
+    const midTop=topAt(.5), midBottom=bottomAt(.5);
+    const obstacles=[];
+    const sideHasEyelets=openingType!=='fixed';
+    if(sideHasEyelets){
+        for(const side of ['left','right',...(openingType==='removable'?['top']:[]),...(lowerEyelets?['bottom']:[])]){
+            const vertical=side==='left'||side==='right';
+            const spanMm=vertical?(side==='left'?heightMm:rightHeightMm):widthMm;
+            const count=Math.max(2,Math.ceil(spanMm/350)+1);
+            for(let i=0;i<count;i++){
+                const t=.07+.86*i/(count-1);
+                obstacles.push({x:vertical?(side==='left'?x+lB/2:x+rectW-rB/2):x+rectW*t,
+                    y:vertical?(side==='left'?leftTop+leftH*t:rightTop+rightH*t):(side==='top'?topAt(t)+tB/2:bottomAt(t)-bB/2),rx:5,ry:6});
+            }
+        }
+    }
+    const zipperPositions=zippersData.map((item,i)=>{
+        const centerCount=zippersData.filter(z=>z.side==='center').length;
+        const index=zippersData.slice(0,i+1).filter(z=>z.side==='center').length;
+        return item.side==='left'?x+(item.offsetMm==null?lB+5:item.offsetMm*scale):
+          item.side==='right'?x+rectW-(item.offsetMm==null?rB+5:item.offsetMm*scale):
+          x+rectW/2+(index-(centerCount+1)/2)*Math.min(18,rectW/(centerCount+1));
+    });
+    for(const zx of zipperPositions){
+        for(const frac of [.04,.12,.50,.88,.96])obstacles.push({x:zx,y:topAt((zx-x)/rectW)+(bottomAt((zx-x)/rectW)-topAt((zx-x)/rectW))*frac,rx:8,ry:11});
+    }
+    const sideLabel=(side)=>{
+        const isLeft=side==='left',cx=isLeft?x+lB/2:x+rectW-rB/2;
+        const top=isLeft?leftTop:rightTop,bottom=isLeft?leftBottom:rightBottom;
+        const pts=[.46,.57,.38,.67,.29,.76,.20,.84,.12,.91].map(t=>({x:cx,y:top+(bottom-top)*t}));
+        const p=pickDrawingLabel(pts,obstacles,false);
+        return drawingNumber(isLeft?bordersMm.left:bordersMm.right,p.x,p.y,-90);
+    };
+    const horizontalLabel=(side)=>{
+        const candidates=[.72,.28,.84,.16,.60,.40,.93,.07,.50].map(t=>({x:x+rectW*t,y:side==='top'?topAt(t)+tB/2:bottomAt(t)-bB/2}));
+        const p=pickDrawingLabel(candidates,obstacles,true);
+        return drawingNumber(side==='top'?bordersMm.top:bordersMm.bottom,p.x,p.y);
+    };
+    const labels=[sideLabel('left'),sideLabel('right'),horizontalLabel('top'),horizontalLabel('bottom')].join('');
+    const centerCount=zippersData.filter(z=>z.side==="center").length;
+    let centerIndex=0;
+    const offsetDimensions=[];
+    const zippers=zippersData.map(item=>{
+        let zx;
+        if(item.side==="left") zx=x+(item.offsetMm===null ? lB+5 : item.offsetMm*scale);
+        else if(item.side==="right") zx=x+rectW-(item.offsetMm===null ? rB+5 : item.offsetMm*scale);
+        else { centerIndex++; zx=x+rectW/2+(centerIndex-(centerCount+1)/2)*Math.min(18,rectW/(centerCount+1)); }
+        zx=Math.max(x+2,Math.min(x+rectW-2,zx));
+        const t=(zx-x)/rectW;
+        const top=topAt(t), bottom=bottomAt(t), localHeight=bottom-top;
+        const lengthPx=Math.min(localHeight,item.lengthMm*scale);
+        const start=top+(localHeight-lengthPx)/2;
+        if(item.side!=="center" && item.offsetMm!==null){
+            const edgeX=item.side==="left" ? x : x+rectW;
+            const dimY=Math.min(topAt(0),topAt(1))+Math.max(25,Math.min(50,localHeight*.13))+offsetDimensions.length*27;
+            const mid=(edgeX+zx)/2;
+            const labelY=dimY-10;
+            const labelX=mid;
+            offsetDimensions.push(`<path d="M ${edgeX} ${dimY-10} V ${dimY+10} M ${zx} ${dimY-10} V ${dimY+10} M ${edgeX} ${dimY} H ${zx}" fill="none" stroke="#b92f28" stroke-width="1.4"/><text x="${mid}" y="${dimY-8}" font-size="11" text-anchor="middle" fill="#b92f28">${item.offsetMm} мм</text>`);
+        }
+        return `${drawingZigzag({x:zx,y:start},{x:zx,y:start+lengthPx})}${zipperExtraEyelets(zx,bottom,bB,scale,item.extraEyelet,x,x+rectW)}`;
+    }).join("");
+    const dripDepth=dripWidthMm>0 ? Math.max(7,Math.min(30,dripWidthMm*scale)) : 0;
+    const drip=dripWidthMm>0 ? `<path d="M ${point(x,leftBottom)} L ${point(x+rectW,rightBottom)} L ${point(x+rectW+12,rightBottom+dripDepth)} L ${point(x-12,leftBottom+dripDepth)} Z" fill="#dce9f3" stroke="#1769aa" stroke-width="1.8"/><text x="${x+rectW/2}" y="${midBottom+dripDepth+18}" text-anchor="middle" font-size="12">Отлив ${dripWidthMm} мм</text>` : "";
+    const pockets=`${hasBox ? `<text x="600" y="18" text-anchor="end" font-size="12">карман под бокс сквозной</text><path d="M 510 23 L ${x+rectW*.77} ${topAt(.77)+tB/2}" fill="none" stroke="#455a70" stroke-width="1.3" marker-end="url(#pocket-arrow-${number})"/>` : ""}${hasPipe ? `<text x="600" y="424" text-anchor="end" font-size="12">карман сквозной</text><path d="M 520 409 L ${x+rectW*.77} ${bottomAt(.77)-bB/2}" fill="none" stroke="#455a70" stroke-width="1.3" marker-end="url(#pocket-arrow-${number})"/>` : ""}`;
+    const dimY=Math.min(leftTop,rightTop)-27;
+    const leftDimX=x-30,rightDimX=x+rectW+30;
+    const leftMid=(leftTop+leftBottom)/2,rightMid=(rightTop+rightBottom)/2;
+    return `<div class="drawing-item"><h3>Проём №${number} — ${quantity} шт.</h3>
+      <svg viewBox="0 0 620 450" role="img" aria-label="Чертёж проёма №${number}" xmlns="http://www.w3.org/2000/svg">
+        <defs><marker id="arrow-${number}" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto-start-reverse"><path d="M 0 0 L 7 3.5 L 0 7 z" fill="#455a70"/></marker><marker id="pocket-arrow-${number}" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M 0 0 L 7 3.5 L 0 7 z" fill="#455a70"/></marker></defs>
+        <path d="${outline}" fill="#e9f4fc" stroke="#1769aa" stroke-width="2.5"/>
+        <path d="${inner}" fill="#f9fcff" stroke="#1769aa" stroke-width="1.8"/>
+        <g font-family="Arial" fill="#243447">${eyelets}${zippers}${drip}${pockets}${labels}${offsetDimensions.join("")}</g>
+        <g stroke="#8898a8" stroke-width="1.2" fill="none"><path d="M ${x} ${Math.min(leftTop,rightTop)-6} V ${dimY-9} M ${x+rectW} ${Math.min(leftTop,rightTop)-6} V ${dimY-9} M ${x-6} ${leftTop} H ${leftDimX-9} M ${x-6} ${leftBottom} H ${leftDimX-9}"/>${shape==="trapezoid" ? `<path d="M ${x+rectW+6} ${rightTop} H ${rightDimX+9} M ${x+rectW+6} ${rightBottom} H ${rightDimX+9}"/>` : ""}</g>
+        <g stroke="#455a70" stroke-width="1.2" fill="none" marker-start="url(#arrow-${number})" marker-end="url(#arrow-${number})"><path d="M ${x} ${dimY} H ${x+rectW}"/><path d="M ${leftDimX} ${leftTop} V ${leftBottom}"/>${shape==="trapezoid" ? `<path d="M ${rightDimX} ${rightTop} V ${rightBottom}"/>` : ""}</g>
+        
+        <g font-family="Arial" font-size="15" fill="#243447" text-anchor="middle"><text x="${x+rectW/2}" y="${dimY-7}">${widthMm.toLocaleString("ru-RU")} мм</text><text x="${leftDimX-11}" y="${leftMid}" transform="rotate(-90 ${leftDimX-11} ${leftMid})">${heightMm.toLocaleString("ru-RU")} мм</text>${shape==="trapezoid" ? `<text x="${rightDimX+16}" y="${rightMid}" transform="rotate(-90 ${rightDimX+16} ${rightMid})">${rightHeightMm.toLocaleString("ru-RU")} мм</text>` : ""}</g>
+      </svg><div class="drawing-actions"><button type="button" class="secondary" onclick="downloadDrawing(this)">Скачать PNG</button><button type="button" class="secondary" onclick="shareDrawing(this)">Поделиться</button></div><p class="note">${shape==="trapezoid" ? `Трапеция: слева ${heightMm} мм, справа ${rightHeightMm} мм, горизонтальная сторона ${horizontalSide==="top" ? "сверху" : "снизу"}.` : `Прямоугольник: ${widthMm} × ${heightMm} мм.`} Молний: ${zippersData.length}.${dripWidthMm ? ` Отлив: ${dripWidthMm} мм.` : ""}</p></div>`;
+}
+
+function markDrawingStale() {
+    const result = document.getElementById('result');
+    if (result && result.querySelector('svg')) {
+        let note = document.getElementById('drawingStaleNote');
+        if (!note) { note = document.createElement('p'); note.id = 'drawingStaleNote'; note.style.cssText = 'padding:10px;background:#fff4df;border:1px solid #c87b19;border-radius:6px;font-weight:bold'; result.prepend(note); }
+        note.textContent = 'Тип изделия изменён. Нажми «Рассчитать смету», чтобы обновить люверсы на чертеже.';
+    }
+}
+
+function makeArbitraryDrawing(number,w,hL,hR,quantity,zippers,drip,openingType,borders,lowerEyelets,hasBox,hasPipe,geo) {
+    const pts=geo.points, xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+    const minX=Math.min(...xs), maxY=Math.max(...ys), minY=Math.min(...ys);
+    const scale=Math.min(390/geo.width,270/geo.height);
+    const P=p=>({x:115+(p.x-minX)*scale,y:340-(p.y-minY)*scale});
+    const pp=pts.map(P);
+    const poly=pp.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const center=pp.reduce((a,p)=>({x:a.x+p.x/4,y:a.y+p.y/4}),{x:0,y:0});
+    const mid=(a,b,t=.5)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+    // Строим внутреннюю границу окантовки параллельными смещениями сторон.
+    // Так ширина полосы и расположение люверсов одинаковы на прямых и наклонных краях.
+    const bandMm=[borders.bottom,borders.right,borders.top,borders.left];
+    const edges=pp.map((a,i)=>{
+        const b=pp[(i+1)%4],len=Math.hypot(b.x-a.x,b.y-a.y)||1;
+        const m=mid(a,b),v={x:center.x-m.x,y:center.y-m.y};
+        let nx=-(b.y-a.y)/len,ny=(b.x-a.x)/len;
+        if(nx*v.x+ny*v.y<0){nx=-nx;ny=-ny;}
+        const depth=Math.min((Number(bandMm[i])||50)*scale*2, (i===0||i===2 ? geo.height : geo.width)*scale*.32);
+        return {a,b,nx,ny,depth,len};
+    });
+    function intersection(e1,e2){
+        const a={x:e1.a.x+e1.nx*e1.depth,y:e1.a.y+e1.ny*e1.depth};
+        const b={x:e2.a.x+e2.nx*e2.depth,y:e2.a.y+e2.ny*e2.depth};
+        const u={x:e1.b.x-e1.a.x,y:e1.b.y-e1.a.y};
+        const v={x:e2.b.x-e2.a.x,y:e2.b.y-e2.a.y};
+        const cross=u.x*v.y-u.y*v.x;
+        if(Math.abs(cross)<.0001)return mid(a,b);
+        const t=((b.x-a.x)*v.y-(b.y-a.y)*v.x)/cross;
+        return {x:a.x+u.x*t,y:a.y+u.y*t};
+    }
+    const inset=edges.map((e,i)=>intersection(edges[(i+3)%4],e));
+    const eyelet=(edgeIndex)=>{
+        const e=edges[edgeIndex],count=Math.max(2,Math.ceil(e.len/(350*scale))+1);
+        const vertical=edgeIndex===1||edgeIndex===3;
+        const {rx,ry}=uniformEyeletSize(vertical);
+        return Array.from({length:count},(_,i)=>{
+            const p=mid(e.a,e.b,.07+.86*i/(count-1));
+            const cx=p.x+e.nx*e.depth/2,cy=p.y+e.ny*e.depth/2;
+            return `<ellipse cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" rx="${rx.toFixed(2)}" ry="${ry.toFixed(2)}" fill="white" stroke="#45647c" stroke-width="1.2"/>`;
+        }).join('');
+    };
+    const showSideEyelets=openingType==='roll'||openingType==='removable';
+    const eyelets=!showSideEyelets?'':eyelet(3)+eyelet(1)+(openingType==='removable'?eyelet(2):'')+(lowerEyelets?eyelet(0):'');
+    const eyeletNote=showSideEyelets?`Люверсы: по бокам${openingType==='removable'?', сверху':''}${lowerEyelets?', снизу':''}.`:'Без люверсов (глухое).';
+    const arbObstacles=[];
+    if(showSideEyelets){
+        for(const ei of [3,1,...(openingType==='removable'?[2]:[]),...(lowerEyelets?[0]:[])]){
+            const e=edges[ei],count=Math.max(2,Math.ceil(e.len/(350*scale))+1);
+            for(let j=0;j<count;j++){
+                const p=mid(e.a,e.b,.07+.86*j/(count-1));
+                arbObstacles.push({x:p.x+e.nx*e.depth/2,y:p.y+e.ny*e.depth/2,rx:5,ry:6});
+            }
+        }
+    }
+    const arbZipFractions=zippers.map((z,i)=>z.side==='center'?.5:z.side==='left'?(z.offsetMm==null?borders.left+30:z.offsetMm)/w:1-(z.offsetMm==null?borders.right+30:z.offsetMm)/w);
+    for(const t of arbZipFractions){
+        for(const u of [.03,.1,.5,.9,.97]){
+            const b=mid(pp[0],pp[1],t),a=mid(pp[3],pp[2],t),p=mid(b,a,u);
+            arbObstacles.push({x:p.x,y:p.y,rx:9,ry:11});
+        }
+    }
+    const borderLabels=edges.map((e,i)=>{
+        const isSide=i===1||i===3;
+        const fractions=isSide?[.46,.57,.38,.67,.29,.76,.20,.84,.12,.91]:[.72,.28,.84,.16,.60,.40,.93,.07,.50];
+        const candidates=fractions.map(t=>{
+            const p=mid(e.a,e.b,t);
+            return {x:p.x+e.nx*e.depth/2,y:p.y+e.ny*e.depth/2};
+        });
+        const p=pickDrawingLabel(candidates,arbObstacles,!isSide);
+        return drawingNumber(bandMm[i],p.x,p.y,isSide?-90:0,10);
+    }).join('');
+    const dev=geo.dev;
+    const label=(a,b,t)=>{const p=mid(a,b);return `<text x="${p.x}" y="${p.y-6}" text-anchor="middle" font-size="12" fill="#163a58">${t}</text>`};
+    const dash=`<g stroke="#8b98a4" stroke-dasharray="6 5" stroke-width="1.2"><path d="M 65 ${pp[0].y} H 550 M 65 ${pp[3].y} H 550 M ${pp[0].x} 35 V 385 M ${pp[1].x} 35 V 385"/></g>`;
+    const deviationLabels=`<g font-family="Arial" font-size="12" font-weight="bold" fill="#bd4432"><text x="${pp[1].x+9}" y="${pp[1].y+18}">Низ ${dev.db>=0?'+':''}${dev.db}</text><text x="${pp[2].x+8}" y="${pp[2].y-12}">Верх ${dev.dt>=0?'+':''}${dev.dt}</text><text x="${pp[3].x-72}" y="${pp[3].y-13}">Лево ${dev.dl>=0?'+':''}${dev.dl}</text><text x="${pp[2].x+8}" y="${pp[2].y+7}">Право ${dev.dr>=0?'+':''}${dev.dr}</text></g>`;
+    // Подписи карманов вынесены за контур и соединены с ним стрелками.
+    const pocketDefs=`<defs><marker id="pocket-arb-${number}" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M 0 0 L 7 3.5 L 0 7 Z" fill="#455a70"/></marker></defs>`;
+    const topTarget=mid(pp[3],pp[2],.68),bottomTarget=mid(pp[0],pp[1],.68);
+    const pockets=`${hasBox?`<text x="525" y="25" text-anchor="end" font-size="12" fill="#163a58">карман под бокс сквозной</text><path d="M 495 30 L ${topTarget.x} ${topTarget.y+6}" fill="none" stroke="#455a70" stroke-width="1.2" marker-end="url(#pocket-arb-${number})"/>`:''}${hasPipe?`<text x="530" y="391" text-anchor="end" font-size="12" fill="#163a58">карман сквозной</text><path d="M 480 378 L ${bottomTarget.x} ${bottomTarget.y-6}" fill="none" stroke="#455a70" stroke-width="1.2" marker-end="url(#pocket-arb-${number})"/>`:''}`;
+    // Размеры сторон — за пределами контура, чтобы не перекрывать карманы и отлив.
+    const lowerMid=mid(pp[0],pp[1]);
+    const dimensions=`<text x="${lowerMid.x}" y="${Math.max(pp[0].y,pp[1].y)+24}" text-anchor="middle" font-size="13" fill="#163a58">${w} мм</text><text x="${Math.min(pp[0].x,pp[3].x)-14}" y="${mid(pp[0],pp[3]).y}" text-anchor="end" font-size="13" fill="#163a58">${hL} мм</text><text x="${Math.max(pp[1].x,pp[2].x)+12}" y="${mid(pp[1],pp[2]).y}" text-anchor="start" font-size="13" fill="#163a58">${hR} мм</text>`;
+    // Отлив идёт вдоль нижней наклонной стороны и направлен наружу вниз.
+    const lowerDx=pp[1].x-pp[0].x,lowerDy=pp[1].y-pp[0].y;
+    const lowerLen=Math.hypot(lowerDx,lowerDy)||1;
+    const depth=drip>0?Math.max(5,Math.min(22,drip*scale)):0;
+    const nx=-lowerDy/lowerLen*depth,ny=lowerDx/lowerLen*depth;
+    const dripDrawing=drip>0?`<polygon points="${pp[0].x},${pp[0].y} ${pp[1].x},${pp[1].y} ${pp[1].x+nx},${pp[1].y+ny} ${pp[0].x+nx},${pp[0].y+ny}" fill="#dce9f3" stroke="#1769aa" stroke-width="1.7"/><text x="${lowerMid.x}" y="${Math.max(pp[0].y,pp[1].y)+46}" text-anchor="middle" font-size="12" fill="#163a58">Отлив ${drip} мм</text>`:'';
+    // Молнии и размерные линии привязаны к ВНЕШНЕМУ контуру, а не к внутренней кромке окантовки.
+    const arbZipCount=zippers.filter(z=>z.side==='center').length;
+    let arbCenterIndex=0, arbDimensionIndex=0;
+    const arbZippers=zippers.map(item=>{
+        let t;
+        if(item.side==='center') {arbCenterIndex++;t=.5+(arbCenterIndex-(arbZipCount+1)/2)*.055;}
+        else if(item.side==='left') t=(item.offsetMm===null?borders.left+30:item.offsetMm)/w;
+        else t=1-(item.offsetMm===null?borders.right+30:item.offsetMm)/w;
+        t=Math.max(.015,Math.min(.985,t));
+        const bottom=mid(pp[0],pp[1],t),top=mid(pp[3],pp[2],t);
+        const len=Math.hypot(top.x-bottom.x,top.y-bottom.y)||1;
+        const lengthPx=Math.min(len,item.lengthMm*scale);
+        const cx=(top.x+bottom.x)/2,cy=(top.y+bottom.y)/2;
+        const a={x:cx+(top.x-bottom.x)/len*lengthPx/2,y:cy+(top.y-bottom.y)/len*lengthPx/2};
+        const b={x:cx-(top.x-bottom.x)/len*lengthPx/2,y:cy-(top.y-bottom.y)/len*lengthPx/2};
+        const zip=drawingZigzag(a,b);
+        let dim='';
+        if(item.side!=='center' && item.offsetMm!==null){
+            // Правая/левая крайняя точка на внешней боковой стороне на высоте размерной линии.
+            const edge= item.side==='left' ? edges[3] : edges[1];
+            const y=Math.min(pp[3].y,pp[2].y)+Math.max(32,Math.min(60,geo.height*scale*.15))+arbDimensionIndex++*28;
+            const dy=edge.b.y-edge.a.y;
+            const ratio=Math.abs(dy)<.001?.5:Math.max(0,Math.min(1,(y-edge.a.y)/dy));
+            const ex=edge.a.x+(edge.b.x-edge.a.x)*ratio;
+            const mx=(ex+a.x)/2;
+            dim=`<path d="M ${a.x} ${y-9} V ${y+9} M ${ex} ${y-9} V ${y+9} M ${a.x} ${y} H ${ex}" fill="none" stroke="#b92f28" stroke-width="1.4"/><text x="${mx}" y="${y-8}" font-size="11" text-anchor="middle" fill="#b92f28">${item.offsetMm} мм</text>`;
+        }
+        const bottomEdge=edges[0];
+        const band=bottomEdge.depth;
+        const inward={x:bottom.x+bottomEdge.nx*band/2,y:bottom.y+bottomEdge.ny*band/2};
+        const radius=Math.max(2,Math.min(3.6,band*.18));
+        const signs=item.extraEyelet==='both'?[-1,1]:item.extraEyelet==='left'?[-1]:item.extraEyelet==='right'?[1]:[];
+        const extra=signs.map(sign=>{
+            const pt=mid(pp[0],pp[1],Math.max(.01,Math.min(.99,t+sign*50/w)));
+            const px=pt.x+bottomEdge.nx*band/2,py=pt.y+bottomEdge.ny*band/2;
+            if(Math.abs(px-inward.x)<radius*2) return '';
+            return `<circle cx="${px}" cy="${py}" r="${radius}" fill="white" stroke="#163a58" stroke-width="1.3"/><path d="M ${px+sign*14} ${py-20} L ${px+sign*radius*.7} ${py-radius*.7}" fill="none" stroke="#163a58" stroke-width="1"/><text x="${px+sign*17}" y="${py-23}" text-anchor="middle" font-size="11" fill="#163a58">Ø10</text>`;
+        }).join('');
+        return zip+dim+extra;
+    }).join('');
+    return `<div class="drawing-item"><h3>Проём №${number} — ${quantity} шт.</h3><svg viewBox="0 0 620 430" role="img" aria-label="Чертёж произвольного четырёхугольника №${number}" xmlns="http://www.w3.org/2000/svg">${pocketDefs}${dash}<polygon points="${poly}" fill="#e9f4fc" stroke="#1769aa" stroke-width="2.5"/><polygon points="${inset.map(p=>p.x+','+p.y).join(' ')}" fill="#f9fcff" stroke="#1769aa" stroke-width="1.5"/>${dripDrawing}${dimensions}${deviationLabels}${pockets}<g class="drawing-eyelets" fill="none" stroke="none">${eyelets}</g>${arbZippers}${borderLabels}<text x="300" y="416" text-anchor="middle" font-size="12" fill="#52677a">Пунктир — линии лазерного уровня; отклонения в мм</text></svg><div class="drawing-actions"><button type="button" class="secondary" onclick="downloadDrawing(this)">Скачать PNG</button><button type="button" class="secondary" onclick="shareDrawing(this)">Поделиться</button></div><p class="note">Произвольный четырёхугольник. Габарит для расчёта: ${Math.round(geo.width)} × ${Math.round(geo.height)} мм. ${eyeletNote} Молний: ${zippers.length}. ${drip?'Отлив '+drip+' мм.':''} Контур построен по замерам. Ширина окантовки указана на чертеже.</p></div>`;
+}
+
+// РАСЧЁТ СМЕТЫ
+function calculate() {
+    try {
+        calculateInternal();
+    } catch (error) {
+        console.error("Ошибка расчёта:", error);
+        const result = document.getElementById("result");
+        if (result) {
+            const panel = document.createElement("div");
+            panel.setAttribute("role", "alert");
+            panel.style.cssText = "background:#fff1e9;border:2px solid #bf472c;padding:14px;border-radius:9px;margin:12px 0;overflow-wrap:anywhere";
+            panel.innerHTML = "<b>Не удалось рассчитать смету.</b><p>Ошибка: " + escapeHtml(error && error.message || String(error)) + "</p><p>Сделай скриншот этого сообщения и пришли мне. Данные заказа не очищай.</p>";
+            result.prepend(panel);
+            result.scrollIntoView({behavior:"smooth",block:"start"});
+        }
+    }
+}
+
+function calculateInternal() {
+    currentPlan = null;
+
+    const positions = document.querySelectorAll("#positions > .position");
+    if (!positions.length) throw new Error("Не найдено ни одного проёма. Добавь проём и повтори расчёт.");
+    const differentBases = document.getElementById("differentBases").checked;
+    const differentPipes = document.getElementById("differentPipes").checked;
+    const differentBoxes = document.getElementById("differentBoxes").checked;
+
+    const globalBase = document.getElementById("globalBase").value;
+    const globalPipe = document.getElementById("globalPipe").value;
+    const globalBox = document.getElementById("globalBox").value;
+
+    const currentPrices = {
+        pvc: Number(document.getElementById("pricePvc").value),
+        screen: Number(document.getElementById("priceScreen").value)
+    };
+    if (Object.values(currentPrices).some(price => !Number.isFinite(price) || price < 0)) {
+        alert("Проверь цены изготовления: они не могут быть отрицательными.");
+        return;
+    }
+
+    const zipperDefaultPriceText = document.getElementById("zipperPrice").value.trim();
+    const zipperDefaultPrice = zipperDefaultPriceText === "" ? NaN : Number(zipperDefaultPriceText);
+    if (!Number.isFinite(zipperDefaultPrice) || zipperDefaultPrice < 0) {
+        alert("Проверь общую цену молнии.");
+        return;
+    }
+
+    const strapDefaultPriceText = document.getElementById("strapPrice").value.trim();
+    const strapDefaultPrice = strapDefaultPriceText === "" ? NaN : Number(strapDefaultPriceText);
+    if (!Number.isFinite(strapDefaultPrice) || strapDefaultPrice < 0) {
+        alert("Проверь общую цену ремней.");
+        return;
+    }
+
+    // Убираем предыдущие ошибки, чтобы при повторном расчёте не путать пользователя.
+    document.querySelectorAll('.geometry-feedback').forEach(el => { el.style.display='none'; el.innerHTML=''; });
+    document.querySelectorAll('.geometry-invalid').forEach(el => el.classList.remove('geometry-invalid'));
+    let geometryWarnings = [];
+
+    function showGeometryProblem(position, field, html) {
+        const box = position.querySelector('.geometry-feedback');
+        box.innerHTML = html;
+        box.style.display = 'block';
+        if (field) {
+            field.classList.add('geometry-invalid');
+            field.scrollIntoView({behavior:'smooth',block:'center'});
+            field.focus({preventScroll:true});
+        } else {
+            box.scrollIntoView({behavior:'smooth',block:'center'});
+            box.focus({preventScroll:true});
+        }
+    }
+
+    let strapsTotal = 0;
+    let zipperTotal = 0;
+    let manufacturingTotal = 0;
+    let installationTotal = 0;
+    let rows = "";
+    let drawings = "";
+    const requiredLengths = [];
+    const requiredBoxLengths = [];
+
+    for (let i = 0; i < positions.length; i++) {
+        const position = positions[i];
+        const width = Number(position.querySelector(".width").value);
+        const height = Number(position.querySelector(".height").value);
+        const shape = position.querySelector(".window-shape").value;
+        const rightHeightText = position.querySelector(".right-height").value.trim();
+        const rightHeight = shape !== "rectangle" ? Number(rightHeightText) : height;
+        const horizontalSide = position.querySelector(".horizontal-side").value;
+        const quantity = Number(position.querySelector(".quantity").value);
+        const material = position.querySelector(".material").value;
+        const opening = position.querySelector(".opening").value;
+
+        const base = differentBases ? position.querySelector(".base").value : globalBase;
+        const pipe = differentPipes ? position.querySelector(".pipe").value : globalPipe;
+        const box = differentBoxes ? position.querySelector(".box").value : globalBox;
+
+        let customGeometry = null;
+        if (shape === "arbitrary") {
+            const readDev = cls => Number(position.querySelector(cls).value);
+            const db = readDev(".dev-bottom"), dt = readDev(".dev-top"), dl = readDev(".dev-left"), dr = readDev(".dev-right");
+            const approx = position.querySelector('.approx-mode').checked;
+            const topField = position.querySelector('.dev-top');
+            if (![width,height,rightHeight,db,dt,dl,dr].every(Number.isFinite) || width<=0 || height<=0 || rightHeight<=0 || Math.abs(db)>=width || Math.abs(dl)>=height || Math.abs(dr)>=rightHeight) {
+                const invalid = !Number.isFinite(width)||width<=0 ? position.querySelector('.width') :
+                    !Number.isFinite(height)||height<=0 ? position.querySelector('.height') :
+                    !Number.isFinite(rightHeight)||rightHeight<=0 ? position.querySelector('.right-height') :
+                    Math.abs(db)>=width ? position.querySelector('.dev-bottom') :
+                    Math.abs(dl)>=height ? position.querySelector('.dev-left') :
+                    Math.abs(dr)>=rightHeight ? position.querySelector('.dev-right') : topField;
+                showGeometryProblem(position,invalid,`<b>Проём №${i+1}: проверь размеры.</b><p>Длина стороны должна быть больше абсолютного отклонения этой стороны. Все размеры и отклонения должны быть числами.</p>`);
+                return;
+            }
+            const b={x:Math.sqrt(width*width-db*db),y:db};
+            const tl={x:dl,y:Math.sqrt(height*height-dl*dl)};
+            const tr={x:b.x+dr,y:b.y+Math.sqrt(rightHeight*rightHeight-dr*dr)};
+            const expectedTop=tr.y-tl.y;
+            const difference=expectedTop-dt;
+            if (Math.abs(difference)>5) {
+                const suggested=Math.round(expectedTop);
+                const direction=difference>0 ? 'увеличить' : 'уменьшить';
+                const msg=`<b>Проём №${i+1}: отклонения не совпадают с длинами сторон.</b>
+                    <p>Введено для верхнего края: <b>${dt>0?'+':''}${dt} мм</b>. По длинам сторон и остальным отклонениям получается <b>${suggested>0?'+':''}${suggested} мм</b>.</p>
+                    <p>Расхождение: <b>${Math.abs(difference).toFixed(1)} мм</b> (допуск 5 мм). Чтобы согласовать геометрию при неизменных остальных размерах, нужно <b>${direction} верхнее отклонение на ${Math.abs(difference).toFixed(1)} мм</b>.</p>
+                    <button type="button" class="apply-geometry-suggestion" style="padding:8px 12px;margin:5px 0;background:#1769aa;color:white;border:0;border-radius:6px">Подставить ${suggested>0?'+':''}${suggested} мм и пересчитать</button>
+                    <p><b>Важно:</b> это математическое согласование, а не подтверждённый замер. Если ошибка могла быть в нижнем уклоне или вертикалях, перепроверь их. Не запускай раскрой по предварительному контуру.</p>`;
+                const box=position.querySelector('.geometry-feedback');
+                if (!approx) {
+                    showGeometryProblem(position,topField,msg+'<p>Либо включи «Замеры с погрешностью» для предварительной сметы.</p>');
+                    box.querySelector('.apply-geometry-suggestion').addEventListener('click',()=>{topField.value=suggested;calculate();});
+                    return;
+                }
+                box.innerHTML=msg+'<p><b>Предварительный режим включён:</b> расчёт продолжится по вычисленному контуру. Верхнее отклонение на чертеже будет вычисленным, а не введённым.</p>';
+                box.style.display='block';
+                box.querySelector('.apply-geometry-suggestion').addEventListener('click',()=>{topField.value=suggested;calculate();});
+                geometryWarnings.push(`Проём №${i+1}: введённый верхний уклон ${dt} мм не согласован с другими замерами; для предварительного контура использовано ${suggested} мм. Расхождение ${Math.abs(difference).toFixed(1)} мм. НЕ ДЛЯ РАСКРОЯ.`);
+            }
+            const xs=[0,b.x,tl.x,tr.x],ys=[0,b.y,tl.y,tr.y];
+            customGeometry={points:[{x:0,y:0},b,tr,tl], width:Math.max(...xs)-Math.min(...xs),height:Math.max(...ys)-Math.min(...ys),dev:{db,dt:expectedTop,dl,dr},approximate:Math.abs(difference)>5};
+            if (customGeometry.width<=0 || customGeometry.height<=0) {
+                showGeometryProblem(position,topField,`<b>Проём №${i+1}:</b> получилась некорректная геометрия. Проверь длины и отклонения.`);return;
+            }
+        }
+        if (
+            !Number.isFinite(width) || width <= 0 ||
+            !Number.isFinite(height) || height <= 0 ||
+            (shape !== "rectangle" && (rightHeightText === "" || !Number.isFinite(rightHeight) || rightHeight <= 0)) ||
+            !Number.isInteger(quantity) || quantity < 1
+        ) {
+            alert(`Проверь размеры и количество в проёме №${i + 1}.`);
+            return;
+        }
+
+        const widthM = width / 1000;
+        const heightM = height / 1000;
+        const hasDrip = position.querySelector(".drip").value === "yes";
+        const dripWidthText = position.querySelector(".drip-width").value.trim();
+        const dripWidthMm = hasDrip ? Number(dripWidthText) : 0;
+        if (hasDrip && (dripWidthText === "" || !Number.isFinite(dripWidthMm) || dripWidthMm <= 0)) {
+            alert(`Проверь ширину отлива в проёме №${i + 1}.`);
+            return;
+        }
+        // Материал для трапеции расходуется как на прямоугольник по большей высоте: обрезки в отходы.
+        // Монтаж также считаем по прямоугольнику с большей высотой. Минимум 1 м² на изделие.
+        const areaWidthM = customGeometry ? customGeometry.width / 1000 : widthM;
+        const areaHeightM = customGeometry ? customGeometry.height / 1000 : Math.max(height,rightHeight)/1000;
+        const manufacturingArea = Math.max(areaWidthM * (areaHeightM + dripWidthMm / 1000), 1) * quantity;
+        const installationArea = Math.max(areaWidthM * areaHeightM, 1) * quantity;
+        const customPriceText = position.querySelector(".custom-price").value.trim();
+        const pricePerSquareMeter = customPriceText === ""
+            ? currentPrices[material]
+            : Number(customPriceText);
+        if (!Number.isFinite(pricePerSquareMeter) || pricePerSquareMeter < 0) {
+            alert(`Проверь цену изготовления в проёме №${i + 1}.`);
+            return;
+        }
+        const manufacturing = manufacturingArea * pricePerSquareMeter;
+        const installation = installationArea * basePrices[base];
+
+        const zipperCountText = position.querySelector(".zipper-count").value.trim();
+        const zipperCount = Number(zipperCountText);
+        if (zipperCountText === "" || !Number.isInteger(zipperCount) || zipperCount < 0 || zipperCount > 1000) {
+            alert(`Проверь количество молний в проёме №${i + 1}.`);
+            return;
+        }
+        const zipperItems = Array.from(position.querySelectorAll(".zipper-item"));
+        if (zipperItems.length !== zipperCount) {
+            alert(`Проверь количество молний в проёме №${i + 1}.`);
+            return;
+        }
+        let zipperCost = 0;
+        const zipperLengths = [];
+        const zippersData = [];
+        for (const item of zipperItems) {
+            const lengthText = item.querySelector(".zipper-item-length").value.trim();
+            const priceText = item.querySelector(".zipper-item-price").value.trim();
+            const lengthMm = lengthText === "" ? height : Number(lengthText);
+            const unitPrice = priceText === "" ? zipperDefaultPrice : Number(priceText);
+            if (!Number.isFinite(lengthMm) || lengthMm <= 0 ||
+                !Number.isFinite(unitPrice) || unitPrice < 0) {
+                alert(`Проверь длину и цену молний в проёме №${i + 1}.`);
+                return;
+            }
+            const side = item.querySelector(".zipper-item-side").value;
+            const offsetText = item.querySelector(".zipper-item-offset").value.trim();
+            const offsetMm = offsetText === "" ? null : Number(offsetText);
+            if (side !== "center" && (offsetMm !== null && (!Number.isFinite(offsetMm) || offsetMm < 0 || offsetMm > width))) {
+                alert(`Проверь отступ молнии от края в проёме №${i + 1}: от 0 до ширины окна.`);
+                return;
+            }
+            zippersData.push({ lengthMm, side, offsetMm, extraEyelet: item.querySelector(".zipper-extra-eyelet")?.value || "none" });
+            zipperLengths.push(lengthMm / 1000);
+            zipperCost += lengthMm / 1000 * unitPrice * quantity;
+        }
+        zipperTotal += zipperCost;
+
+        const strapsNeeded = position.querySelector(".straps").value === "yes";
+        let strapCount = 0;
+        let strapUnitPrice = strapDefaultPrice;
+        let strapCost = 0;
+        if (strapsNeeded) {
+            const countText = position.querySelector(".strap-count").value.trim();
+            const priceText = position.querySelector(".strap-custom-price").value.trim();
+            strapCount = countText === ""
+                ? automaticStrapCount(widthM, pipe === "yes")
+                : Number(countText);
+            strapUnitPrice = priceText === "" ? strapDefaultPrice : Number(priceText);
+            if (!Number.isInteger(strapCount) || strapCount < 0 ||
+                !Number.isFinite(strapUnitPrice) || strapUnitPrice < 0) {
+                alert(`Проверь количество и цену ремней в проёме №${i + 1}.`);
+                return;
+            }
+            strapCost = strapCount * strapUnitPrice * quantity;
+        }
+        strapsTotal += strapCost;
+
+        manufacturingTotal += manufacturing;
+        installationTotal += installation;
+
+        for (let q = 0; q < quantity; q++) {
+            if (pipe === "yes") requiredLengths.push(widthM);
+            if (box === "yes") requiredBoxLengths.push(widthM);
+        }
+
+        const bordersMm = {
+            left: Number(position.querySelector(".border-left").value),
+            right: Number(position.querySelector(".border-right").value),
+            top: Number(position.querySelector(".border-top").value),
+            bottom: Number(position.querySelector(".border-bottom").value)
+        };
+        if (Object.values(bordersMm).some(v => !Number.isFinite(v) || v <= 0) ||
+            bordersMm.left + bordersMm.right >= width || bordersMm.top + bordersMm.bottom >= Math.min(height, rightHeight)) {
+            alert(`Проверь ширину окантовки в проёме №${i + 1}: она должна помещаться в габариты окна.`);
+            return;
+        }
+        const lowerEyelets = position.querySelector(".lower-eyelets").checked;
+        drawings += makeOpeningDrawing(i + 1, width, height, quantity, zippersData, dripWidthMm, opening, bordersMm, lowerEyelets, box === "yes", pipe === "yes", shape, rightHeight, horizontalSide, customGeometry);
+
+        rows += `
+            <tr>
+                <td>№${i + 1} (${quantity} шт.)</td>
+                <td>${manufacturingArea.toFixed(2)} м²</td>
+                <td>${hasDrip ? dripWidthMm + " мм" : "Нет"}</td>
+                <td>${materialNames[material]}</td>
+                <td>${openingNames[opening]}</td>
+                <td>${pricePerSquareMeter.toLocaleString("ru-RU")} ₽/м²</td>
+                <td>${Math.round(manufacturing).toLocaleString("ru-RU")} ₽</td>
+                <td>${baseNames[base]}</td>
+                <td>${Math.round(installation).toLocaleString("ru-RU")} ₽</td>
+                <td>${pipe === "yes" ? "Да" : "Нет"}</td>
+                <td>${box === "yes" ? "Да" : "Нет"}</td>
+                <td>${zipperCount ? zipperCount + " шт./окно (" + zipperLengths.map(x => x.toFixed(2) + " м").join(" + ") + ") × " + quantity + " / " + Math.round(zipperCost).toLocaleString("ru-RU") + " ₽" : "Нет"}</td>
+                <td>${strapsNeeded ? strapCount + " шт./окно × " + quantity + " / " + Math.round(strapCost).toLocaleString("ru-RU") + " ₽" : "Нет"}</td>
+            </tr>
+        `;
+    }
+
+    let pipePlan = {
+        assignments: [], virtualStock: stock.map(item => ({...item})),
+        bars: [], newStock: [], paidMeters: 0, pipeCost: 0
+    };
+    let boxPlan = {
+        assignments: [], virtualStock: boxStock.map(item => ({...item})),
+        bars: [], newStock: [], paidMeters: 0, pipeCost: 0
+    };
+
+    try {
+        if (requiredLengths.length) {
+            pipePlan = planCutting(requiredLengths);
+        }
+        if (requiredBoxLengths.length) {
+            boxPlan = planCuttingFor(requiredBoxLengths, boxStock, BOX_PRICE, "бокса");
+        }
+    } catch (error) {
+        alert(error.message);
+        return;
+    }
+
+    // Клиентский расчёт: считаем обе позиции с нулевого склада.
+    // Закупочный расчёт выше учитывает реальные складские остатки.
+    let clientPipePlan, clientBoxPlan;
+    try {
+        clientPipePlan = planCuttingFor(requiredLengths, [], PIPE_PRICE, "трубы-утяжелителя");
+        clientBoxPlan = planCuttingFor(requiredBoxLengths, [], BOX_PRICE, "бокса");
+    } catch (error) {
+        alert(error.message);
+        return;
+    }
+
+    const clientPipeCost = clientPipePlan.pipeCost;
+    const clientBoxCost = clientBoxPlan.pipeCost;
+    const purchaseCost = pipePlan.pipeCost + boxPlan.pipeCost;
+    const clientMaterialsCost = clientPipeCost + clientBoxCost;
+    const savings = clientMaterialsCost - purchaseCost;
+    const grandTotal = manufacturingTotal + installationTotal + clientMaterialsCost + zipperTotal + strapsTotal;
+    const agreedTotal = Math.round(grandTotal);
+
+    currentPlan = {
+        stockBefore: stock.map(item => ({...item})),
+        boxStockBefore: boxStock.map(item => ({...item})),
+        pipePlan, boxPlan, requiredLengths, requiredBoxLengths,
+        manufacturingTotal, installationTotal, zipperTotal, strapsTotal, grandTotal, agreedTotal,
+        clientPipeCost, clientBoxCost, purchaseCost, savings
+    };
+
+    function makeCuttingSection(plan, required, itemName) {
+        if (!required.length) return `<p>${itemName} не требуется.</p>`;
+
+        const barRows = plan.bars.map((bar, index) => `
+            <tr>
+                <td>№${index + 1}</td>
+                <td>${bar.pieces.map(x => x.toFixed(2) + " м").join(" + ")}</td>
+                <td>${bar.used.toFixed(2)} м</td>
+                <td>${bar.remaining.toFixed(2)} м</td>
+                <td>${bar.remaining < 3 ? "6 м" : "3 м"}</td>
+            </tr>
+        `).join("");
+
+        const assignmentRows = plan.assignments.map(item => `
+            <tr>
+                <td>${item.pieceLength.toFixed(2)} м</td>
+                <td>${item.oldLength.toFixed(2)} м</td>
+                <td>${item.remaining.toFixed(2)} м</td>
+            </tr>
+        `).join("");
+
+        return `
+            <p><b>Новых шестиметровых хлыстов:</b> ${plan.bars.length}</p>
+            ${plan.bars.length ? `<table>
+                <tr><th>Хлыст</th><th>Отрезки</th><th>Использовано</th><th>Остаток</th><th>Оплата</th></tr>
+                ${barRows}
+            </table>` : `<p>Покупка не требуется: хватает складских остатков.</p>`}
+            <p><b>Использование складских остатков:</b></p>
+            ${assignmentRows ? `<table>
+                <tr><th>Нужный отрезок</th><th>Исходный кусок</th><th>Осталось</th></tr>
+                ${assignmentRows}
+            </table>` : `<p>Складские остатки не используются.</p>`}
+            <p><b>Оплачиваемый метраж:</b> ${plan.paidMeters} м</p>
+            <p><b>Примерная стоимость новой закупки:</b> ${plan.pipeCost.toLocaleString("ru-RU")} ₽</p>
+            <p><b>Новые остатки на склад:</b>
+                ${plan.newStock.length ? plan.newStock.map(x => x.length.toFixed(2) + " м").join(", ") : "нет"}
+            </p>
+        `;
+    }
+
+    const money = amount => Math.round(amount).toLocaleString("ru-RU") + " ₽";
+    const geometryWarningHtml = geometryWarnings.length ? `<div role="alert" style="padding:14px;margin:12px 0;background:#fff1db;border:2px solid #bb6312;border-radius:8px"><b>⚠ Предварительный расчёт — не использовать для раскроя!</b><ul>${geometryWarnings.map(w=>`<li>${w}</li>`).join('')}</ul></div>` : '';
+    document.getElementById("result").innerHTML = `${geometryWarningHtml}
+        <h2>Смета заказа — цена для клиента</h2>
+        <p class="note">Труба и бокс рассчитываются как новые, без учёта складских остатков. Для трапеции материал и монтаж считаются по прямоугольнику с большей высотой (обрезки материала в отходы). Отлив увеличивает площадь только для изготовления.</p>
+        <table>
+            <tr>
+                <th>Проём</th><th>Площадь изготовления</th><th>Отлив</th><th>Материал</th><th>Тип изделия</th>
+                <th>Цена за м²</th>
+                <th>Изготовление</th><th>Основание</th><th>Монтаж</th>
+                <th>Труба</th><th>Бокс</th><th>Молния</th><th>Ремни</th>
+            </tr>
+            ${rows}
+        </table>
+        <h2>Чертежи изделий</h2>
+        <p class="note">Размеры указаны в миллиметрах. Пока показан только прямоугольный контур без дополнительных элементов.</p>
+        <div class="drawing-actions"><button type="button" class="primary" onclick="printAllDrawings()">Просмотр / печать А4 (4 на листе)</button><button type="button" class="secondary" onclick="downloadAllDrawings()">Скачать все чертежи PDF</button><button type="button" class="secondary" onclick="shareAllDrawings()">Поделиться всеми</button></div><p class="note">PDF: по 4 проёма на лист А4. На Android файл откроется в просмотрщике PDF или сохранится для открытия в приложении «Файлы».</p><div class="drawings-grid">${drawings}</div>
+        <h3>Итог для клиента</h3>
+        <p>Изготовление: <b>${money(manufacturingTotal)}</b></p>
+        <p>Монтаж: <b>${money(installationTotal)}</b></p>
+        <p>Труба-утяжелитель (без склада): <b>${money(clientPipeCost)}</b></p>
+        <p>Бокс (без склада): <b>${money(clientBoxCost)}</b></p>
+        <p>Молния для входа: <b>${money(zipperTotal)}</b></p>
+        <p>Ремни для фиксации: <b>${money(strapsTotal)}</b></p>
+        <div class="total">РАСЧЁТНАЯ СТОИМОСТЬ: ${money(grandTotal)}</div>
+        <div class="card" style="margin-top:12px; border:1px solid #9bb8d1">
+          <label for="agreedTotalInput"><b>Итоговая цена для клиента, ₽ (можно изменить вручную)</b></label>
+          <input id="agreedTotalInput" type="number" min="0" step="1" value="${Math.round(grandTotal)}" oninput="updateAgreedTotal()">
+          <p id="priceAdjustment" class="note">Скидка / округление: 0 ₽</p>
+          <p class="note">Эта сумма попадёт в заказ, учёт оплат и расчёт чистой прибыли.</p>
+        </div>
+
+        <div class="card" style="border:2px solid #d7e4ef; margin-top:22px;">
+            <h2>Внутренний расчёт — закупка и склад</h2>
+            <p class="note">Этот раздел предназначен только для тебя. Он учитывает имеющиеся остатки. Стоимость закупки ориентировочная: расчёт использует цены для клиента, фактическая закупочная цена может быть ниже.</p>
+            <h3>Труба-утяжелитель — план закупки</h3>
+            ${makeCuttingSection(pipePlan, requiredLengths, "Труба-утяжелитель")}
+            <h3>Бокс — план закупки</h3>
+            ${makeCuttingSection(boxPlan, requiredBoxLengths, "Бокс")}
+        </div>
+        <p class="note">Предварительный расчёт: оба склада пока не изменены.
+        Подтверждение спишет материалы по внутреннему раскрою с учётом остатков.</p>
+        <button class="success" onclick="confirmOrder()">Подтвердить заказ и обновить склады</button>
+    `;
+}
+
+function updateAgreedTotal() {
+    if (!currentPlan) return;
+    const field=document.getElementById('agreedTotalInput');
+    const value=Number(field.value);
+    const note=document.getElementById('priceAdjustment');
+    if (!field.value.trim() || !Number.isFinite(value) || value<0) {
+        currentPlan.agreedTotal=null;
+        note.textContent='Укажи корректную итоговую цену.';
+        return;
+    }
+    currentPlan.agreedTotal=value;
+    const diff=value-currentPlan.grandTotal;
+    note.textContent=`${diff<0?'Скидка':diff>0?'Наценка / округление':'Скидка / округление'}: ${Math.round(Math.abs(diff)).toLocaleString('ru-RU')} ₽${diff<0?' (−)':diff>0?' (+)':''}`;
+}
+
+// ПОДТВЕРЖДЕНИЕ ЗАКАЗА
+// ПОДТВЕРЖДЕНИЕ ЗАКАЗА
+function confirmOrder() {
+    if (!currentPlan) {
+        alert("Сначала рассчитай смету.");
+        return;
+    }
+
+    if (currentPlan.agreedTotal===null || !Number.isFinite(currentPlan.agreedTotal)) {alert("Укажи корректную итоговую цену для клиента.");return;}
+    if (!confirm("Подтвердить заказ? Использованные куски будут списаны с обоих складов, новые остатки добавлены.")) {
+        return;
+    }
+
+    // Проверяем, что оба склада не менялись после расчёта.
+    const oldPipeIds = currentPlan.stockBefore.map(item => item.id).sort();
+    const nowPipeIds = stock.map(item => item.id).sort();
+    const oldBoxIds = currentPlan.boxStockBefore.map(item => item.id).sort();
+    const nowBoxIds = boxStock.map(item => item.id).sort();
+
+    if (
+        JSON.stringify(oldPipeIds) !== JSON.stringify(nowPipeIds) ||
+        JSON.stringify(oldBoxIds) !== JSON.stringify(nowBoxIds)
+    ) {
+        alert("Один из складов изменился после расчёта. Рассчитай смету заново.");
+        currentPlan = null;
+        return;
+    }
+
+    const planToConfirm = currentPlan;
+
+    // Обновляем склад алюминиевой трубы.
+    stock = planToConfirm.pipePlan.virtualStock.map(item => ({...item}));
+    planToConfirm.pipePlan.newStock.forEach(item => {
+        if (item.length >= MIN_STOCK) {
+            stock.push({
+                id: Date.now() + Math.random(),
+                length: item.length,
+                note: item.note
+            });
+        }
+    });
+    saveStock();
+
+    // Независимо обновляем склад бокса.
+    boxStock = planToConfirm.boxPlan.virtualStock.map(item => ({...item}));
+    planToConfirm.boxPlan.newStock.forEach(item => {
+        if (item.length >= MIN_STOCK) {
+            boxStock.push({
+                id: Date.now() + Math.random(),
+                length: item.length,
+                note: item.note
+            });
+        }
+    });
+    saveBoxStock();
+
+    function historyDescription(before, plan) {
+        const usedPieces = before.filter(oldPiece =>
+            !plan.virtualStock.some(remainingPiece => remainingPiece.id === oldPiece.id)
+        );
+        const usedText = usedPieces.length
+            ? usedPieces.map(item => roundLength(item.length) + " м").join(", ")
+            : "нет";
+        const addedPieces = plan.newStock.filter(item => item.length >= MIN_STOCK);
+        const addedText = addedPieces.length
+            ? addedPieces.map(item => roundLength(item.length) + " м").join(", ")
+            : "нет";
+        return "Списано со склада: " + usedText + ". Новые остатки: " + addedText;
+    }
+
+    addHistory(
+        "Заказ",
+        "Подтверждён заказ с трубой-утяжелителем",
+        historyDescription(planToConfirm.stockBefore, planToConfirm.pipePlan)
+    );
+
+    addBoxHistory(
+        "Заказ",
+        "Подтверждён заказ с профилем «Бокс»",
+        historyDescription(planToConfirm.boxStockBefore, planToConfirm.boxPlan)
+    );
+
+    const total = planToConfirm.agreedTotal;
+    const clientName = prompt("Имя клиента или название объекта (необязательно):", "");
+    const newFinanceOrder = createFinanceOrder(total, clientName === null ? "" : clientName.trim(), planToConfirm);
+    archiveConfirmedOrder(newFinanceOrder, planToConfirm).catch(error => {
+        console.error(error);
+        alert("Заказ подтверждён и склад обновлён, но архив не сохранился. Сохрани резервную копию и проверь память браузера.");
+    });
+    currentPlan = null;
+
+    document.getElementById("result").innerHTML += `
+        <div class="status">
+            <b>Заказ подтверждён.</b><br>
+            Оба склада обновлены. Использованные куски списаны,
+            пригодные остатки добавлены.
+            <br>Стоимость заказа: ${Math.round(total).toLocaleString("ru-RU")} ₽
+        </div>
+    `;
+
+    alert("Заказ подтверждён. Оба склада обновлены.");
+}
+
+
+// ФИНАНСЫ: локальный журнал заказов, платежей и фактических расходов.
+const FINANCE_KEY = "softWindowFinanceOrdersV1";
+function loadFinanceOrders() {
+    try {
+        const data = JSON.parse(safeGetItem("softWindowFinanceOrdersV1") || "[]");
+        return Array.isArray(data) ? data : [];
+    } catch { return []; }
+}
+function saveFinanceOrders() {
+    safeSetItem(FINANCE_KEY, JSON.stringify(financeOrders));
+    renderFinance();
+}
+function financeMoney(n) { return Number(n).toLocaleString("ru-RU", {minimumFractionDigits:2,maximumFractionDigits:2}) + " ₽"; }
+function financeRound(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+function financeSum(items) { return financeRound(items.reduce((s,x) => s + x.amount, 0)); }
+function financeId() { return "З" + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,6).toUpperCase(); }
+function createFinanceOrder(total, client, plan) {
+    const order = {
+        id: financeId(), createdAt: new Date().toISOString(), client,
+        total: financeRound(total), payments: [], expenses: [],
+        closedAt: null, profit: null, exportedToCoinKeeper: false,
+        note: "Смета: изготовление " + financeMoney(plan.manufacturingTotal) +
+              ", монтаж " + financeMoney(plan.installationTotal) +
+              ". Закупка трубы и бокса по плану: " + financeMoney(plan.purchaseCost) +
+              ". Внеси фактические расходы отдельно, включая материалы со склада."
+    };
+    financeOrders.unshift(order);
+    saveFinanceOrders();
+    return order;
+}
+function financeOrder(id) { return financeOrders.find(o => o.id === id); }
+function addFinanceEntry(id, kind) {
+    const order = financeOrder(id);
+    if (!order || order.closedAt) return;
+    const input = document.getElementById("finAmount_" + kind + "_" + id);
+    const noteInput = document.getElementById("finNote_" + kind + "_" + id);
+    const raw = input.value.trim().replace(",", ".");
+    const amount = Number(raw);
+    if (!raw || !Number.isFinite(amount) || amount <= 0 || financeRound(amount) !== amount) {
+        alert("Укажи положительную сумму с точностью до копеек."); return;
+    }
+    if (kind === "payments" && financeSum(order.payments) + amount > order.total + 0.001) {
+        alert("Платёж превышает оставшуюся задолженность. Проверь сумму."); return;
+    }
+    order[kind].push({id: financeId(), amount, note: noteInput.value.trim(), date: new Date().toISOString()});
+    saveFinanceOrders();
+}
+function deleteFinanceEntry(id, kind, entryId) {
+    const order = financeOrder(id);
+    if (!order || order.closedAt || !confirm("Удалить эту операцию?")) return;
+    order[kind] = order[kind].filter(x => x.id !== entryId);
+    saveFinanceOrders();
+}
+function renameFinanceOrder(id) {
+    const order = financeOrder(id);
+    if (!order || order.closedAt) return;
+    const name = prompt("Имя клиента или объект:", order.client || "");
+    if (name !== null) { order.client = name.trim(); saveFinanceOrders(); }
+}
+function closeFinanceOrder(id) {
+    const order = financeOrder(id);
+    if (!order || order.closedAt) return;
+    const received = financeSum(order.payments);
+    if (received + 0.001 < order.total) { alert("Сначала получи полную оплату заказа."); return; }
+    const profit = financeRound(received - financeSum(order.expenses));
+    if (!confirm("Завершить заказ " + id + "?\nЧистая прибыль: " + financeMoney(profit) +
+       "\nПосле завершения платежи и расходы будут заблокированы. В CoinKeeper ничего не отправляется.")) return;
+    order.closedAt = new Date().toISOString();
+    order.profit = profit;
+    saveFinanceOrders();
+}
+var financePage=1, financeExpanded=null;
+function toggleFinanceJournal(){
+ const panel=document.getElementById('financePanel');panel.hidden=!panel.hidden;
+ if(panel.hidden)financeExpanded=null;
+ renderFinance();
+}
+function resetFinancePage(){financePage=1;financeExpanded=null;renderFinance();}
+function moveFinancePage(delta){financePage+=delta;financeExpanded=null;renderFinance();}
+function toggleFinanceDetails(id){financeExpanded=financeExpanded===id?null:id;renderFinance();}
+function renderFinance() {
+    const list = document.getElementById("financeOrders");
+    if (!list) return;
+    const month = document.getElementById("financeMonth").value;
+    const filter = document.getElementById("financeFilter").value;
+    const monthOrders = financeOrders.filter(o => !month || o.createdAt.slice(0,7) === month);
+    const closedMonth = financeOrders.filter(o => o.closedAt && (!month || o.closedAt.slice(0,7) === month));
+    const revenue = monthOrders.reduce((s,o) => s + financeSum(o.payments), 0);
+    const debt = monthOrders.reduce((s,o) => s + Math.max(0, o.total - financeSum(o.payments)), 0);
+    const profit = closedMonth.reduce((s,o) => s + o.profit, 0);
+    document.getElementById("financeSummary").innerHTML =
+        `<b>Заказов создано:</b> ${monthOrders.length} &nbsp; <b>Получено оплат:</b> ${financeMoney(revenue)}<br>` +
+        `<b>Остаток задолженности:</b> ${financeMoney(debt)} &nbsp; <b>Зафиксированная прибыль:</b> ${financeMoney(profit)}<br>` +
+        `<span class="note">Заказы и поступления — по дате создания заказа; прибыль — по дате завершения.</span>`;
+    const panel=document.getElementById('financePanel'), toggle=document.getElementById('financeToggle');
+    toggle.textContent=(panel.hidden?'Показать финансовый журнал':'Скрыть финансовый журнал')+' ('+financeOrders.length+')';
+    toggle.setAttribute('aria-expanded',String(!panel.hidden));
+    if(panel.hidden){list.innerHTML='';return;}
+    const query=document.getElementById('financeSearch').value.trim().toLowerCase();
+    const visible = financeOrders.filter(o => {
+        if(![o.id,o.client].join(' ').toLowerCase().includes(query))return false;
+        const paid = financeSum(o.payments) >= o.total - 0.001;
+        return filter === "all" || (filter === "unpaid" && !paid) ||
+               (filter === "paid" && paid) || (filter === "closed" && o.closedAt);
+    });
+    visible.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+    const pages=Math.max(1,Math.ceil(visible.length/10));
+    financePage=Math.max(1,Math.min(financePage,pages));
+    document.getElementById('financeMatches').textContent='Найдено: '+visible.length;
+    document.getElementById('financePages').innerHTML=pages>1?`<button class="secondary" onclick="moveFinancePage(-1)" ${financePage===1?'disabled':''}>Назад</button><span>Страница ${financePage} из ${pages}</span><button class="secondary" onclick="moveFinancePage(1)" ${financePage===pages?'disabled':''}>Далее</button>`:'';
+    if (!visible.length) { list.innerHTML = '<p class="note">Заказов по выбранному фильтру пока нет.</p>'; return; }
+    list.innerHTML = visible.slice((financePage-1)*10,financePage*10).map(o => {
+        const received = financeSum(o.payments), costs = financeSum(o.expenses);
+        const paid = received >= o.total - 0.001;
+        const operations = (kind, title) => `<div style="margin-top:12px;"><b>${title}</b>` +
+            (o[kind].length ? `<ul>${o[kind].map(x => `<li>${new Date(x.date).toLocaleDateString("ru-RU")}: ${financeMoney(x.amount)} ${escapeHtml(x.note || "")} ${o.closedAt ? "" : `<button class="danger" style="padding:3px 7px" onclick="deleteFinanceEntry('${o.id}','${kind}','${x.id}')">Удалить</button>`}</li>`).join("")}</ul>` : '<p class="note">Пока нет записей.</p>') +
+            (o.closedAt ? "" : `<div class="fields"><div><label>Сумма, ₽</label><input type="number" min="0.01" step="0.01" id="finAmount_${kind}_${o.id}" placeholder="0.00"></div><div><label>Описание</label><input id="finNote_${kind}_${o.id}" placeholder="${kind === "payments" ? "Аванс / окончательный расчёт" : "Материалы / монтаж / доставка"}"></div></div><button class="secondary" onclick="addFinanceEntry('${o.id}','${kind}')">+ Добавить</button>`) + `</div>`;
+        return `<div class="finance-order" style="border:1px solid #ddd;padding:12px;border-radius:9px;margin:8px 0"><h3 style="margin:0">${escapeHtml(o.id)} — ${escapeHtml(o.client || "Без названия")}</h3>
+            <p class="note">Создан ${new Date(o.createdAt).toLocaleString("ru-RU")} ${o.closedAt ? " · Завершён " + new Date(o.closedAt).toLocaleDateString("ru-RU") : ""}</p>
+            <p><b>Сумма заказа:</b> ${financeMoney(o.total)} · <b>Оплачено:</b> ${financeMoney(received)} · <b>Долг:</b> ${financeMoney(Math.max(0,o.total-received))}</p>
+            <button type="button" class="secondary" aria-expanded="${financeExpanded===o.id}" onclick="toggleFinanceDetails('${o.id}')">${financeExpanded===o.id?'Скрыть подробности':'Платежи, расходы и прибыль'}</button>
+            ${financeExpanded===o.id?`<p><b>Фактические расходы:</b> ${financeMoney(costs)} · <b>${o.closedAt ? "Чистая прибыль" : "Предварительная прибыль"}:</b> ${financeMoney(o.closedAt ? o.profit : received-costs)}</p>
+            <p class="note">${escapeHtml(o.note || "")}</p>
+            ${operations("payments", "Платежи клиента")}${operations("expenses", "Расходы по заказу")}
+            ${o.closedAt ? '<p class="status">Заказ завершён. Прибыль зафиксирована. Отправка в CoinKeeper пока недоступна.</p>' :
+               `<button class="secondary" onclick="renameFinanceOrder('${o.id}')">Изменить клиента</button><button class="success" ${paid ? "" : "disabled title='Требуется полная оплата'"} onclick="closeFinanceOrder('${o.id}')">Завершить заказ</button>`}
+            `:""}</div>`;
+    }).join("");
+}
+function downloadFinanceFile(name, contents, type) {
+    const url = URL.createObjectURL(new Blob([contents], {type}));
+    const a = document.createElement("a"); a.href=url; a.download=name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+function exportFinanceCSV() {
+    const rows = [["Заказ", "Клиент", "Дата заказа", "Стоимость", "Оплачено", "Расходы", "Долг", "Дата завершения", "Чистая прибыль", "Статус CoinKeeper"]];
+    financeOrders.forEach(o => { const paid=financeSum(o.payments); rows.push([o.id,o.client,o.createdAt.slice(0,10),o.total,paid,financeSum(o.expenses),financeRound(Math.max(0,o.total-paid)),o.closedAt ? o.closedAt.slice(0,10):"",o.profit ?? "", "Не отправлено"]); });
+    const csv="\uFEFF" + rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+    downloadFinanceFile("zakazy-i-pribyl.csv",csv,"text/csv;charset=utf-8");
+}
+function exportFinanceBackup() {
+    downloadFinanceFile("finansy-myagkie-okna.json",JSON.stringify({version:1,orders:financeOrders},null,2),"application/json");
+}
+function importFinanceBackup(event) {
+    const file=event.target.files[0]; if (!file) return;
+    const reader=new FileReader();
+    reader.onload=() => {
+        try {
+            const data=JSON.parse(reader.result);
+            if (data.version!==1 || !Array.isArray(data.orders) || !data.orders.every(o =>
+                o && typeof o.id==="string" && typeof o.createdAt==="string" &&
+                typeof o.total==="number" && Number.isFinite(o.total) && o.total>=0 &&
+                Array.isArray(o.payments) && Array.isArray(o.expenses) &&
+                [...o.payments,...o.expenses].every(x=>x && Number.isFinite(x.amount) && x.amount>0 && typeof x.date==="string") &&
+                (o.profit===null || Number.isFinite(o.profit)))) throw Error("Формат не подходит");
+            if (confirm("Заменить весь текущий финансовый журнал данными из резервной копии?")) {
+                financeOrders=data.orders; saveFinanceOrders(); alert("Финансовый журнал восстановлен.");
+            }
+        } catch(e) { alert("Не удалось прочитать резервную копию финансов."); }
+        event.target.value="";
+    };
+    reader.readAsText(file);
+}
+
+function resetCalculator() {
+    if (!confirm("Очистить все позиции заказа?")) return;
+    try { sessionStorage.removeItem(DRAWING_DRAFT_KEY); } catch(e) {}
+
+    currentPlan = null;
+    document.getElementById("positions").innerHTML = "";
+
+    document.getElementById("pricePvc").value = "1500";
+    document.getElementById("priceScreen").value = "2200";
+    document.getElementById("zipperPrice").value = "1000";
+    document.getElementById("strapPrice").value = "100";
+    document.getElementById("globalBase").value = "wood";
+    document.getElementById("differentBases").checked = false;
+    document.getElementById("globalPipe").value = "yes";
+    document.getElementById("differentPipes").checked = false;
+    document.getElementById("globalBox").value = "no";
+    document.getElementById("differentBoxes").checked = false;
+
+    positionCounter = 0;
+    addPosition();
+
+    document.getElementById("result").innerHTML = `
+        <h2>Смета заказа</h2>
+        <p>Заполни параметры и нажми «Рассчитать смету».</p>
+    `;
+}
+
+addPosition();
+renderFinance();
+renderStock();
+renderBoxStock();
+renderBoxHistory();
+
+
+// АРХИВ ЗАКАЗОВ: IndexedDB хранит параметры и HTML-чертежи, без PNG/PDF.
+// Для переноса между устройствами предназначена полная JSON-копия.
+const ARCHIVE_DB_NAME='softWindowsOrdersArchiveV1';
+let archiveDBPromise=null;
+function openArchiveDB(){
+ if(archiveDBPromise)return archiveDBPromise;
+ archiveDBPromise=new Promise((resolve,reject)=>{
+  if(!window.indexedDB){reject(new Error('IndexedDB недоступна'));return;}
+  const req=indexedDB.open(ARCHIVE_DB_NAME,1);
+  req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('orders'))req.result.createObjectStore('orders',{keyPath:'id'});};
+  req.onsuccess=()=>resolve(req.result);
+  req.onerror=()=>reject(req.error||new Error('Не удалось открыть архив'));
+ });
+ return archiveDBPromise;
+}
+async function archiveOperation(mode,fn){
+ const db=await openArchiveDB();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('orders',mode),store=tx.objectStore('orders');
+  let value;
+  try{value=fn(store);}catch(e){reject(e);return;}
+  tx.oncomplete=()=>resolve(value);
+  tx.onerror=()=>reject(tx.error||new Error('Ошибка базы'));
+  tx.onabort=()=>reject(tx.error||new Error('Операция отменена'));
+ });
+}
+async function allArchivedOrders(){
+ const db=await openArchiveDB();
+ return new Promise((resolve,reject)=>{
+  const req=db.transaction('orders','readonly').objectStore('orders').getAll();
+  req.onsuccess=()=>resolve(req.result||[]);
+  req.onerror=()=>reject(req.error);
+ });
+}
+function archiveFormSnapshot(){
+ const fields=Array.from(document.querySelectorAll('input,select,textarea')).filter(el=>!el.closest('#positions') && el.id && el.type!=='file');
+ const clone=document.getElementById('positions').cloneNode(true);
+ const originals=document.querySelectorAll('#positions input,#positions select,#positions textarea');
+ const copies=clone.querySelectorAll('input,select,textarea');
+ originals.forEach((el,i)=>{
+  const copy=copies[i];if(!copy)return;
+  if(el.type==='checkbox'||el.type==='radio'){if(el.checked)copy.setAttribute('checked','');else copy.removeAttribute('checked');}
+  else if(el.tagName==='SELECT')Array.from(copy.options).forEach((o,j)=>{o.toggleAttribute("selected",el.options[j].selected);});
+  else copy.setAttribute('value',el.value);
+ });
+ return {positions:clone.innerHTML,counter:positionCounter,fields:fields.map(el=>({id:el.id,value:el.value,checked:el.checked}))};
+}
+async function archiveConfirmedOrder(financeOrder,plan){
+ if(!financeOrder)throw new Error('Нет номера заказа');
+ const snapshot=archiveFormSnapshot();
+ const drawings=Array.from(document.querySelectorAll('#result .drawings-grid .drawing-item')).map(card=>({
+  title:card.querySelector('h3')?.textContent||'Чертёж',
+  svg:card.querySelector('svg')?.outerHTML||'',
+  caption:card.querySelector('p.note')?.textContent||''
+ }));
+ const record={
+  version:1,id:financeOrder.id,createdAt:financeOrder.createdAt,
+  client:financeOrder.client||'',phone:'',address:'',
+  total:financeOrder.total,openings:drawings.length,
+  snapshot,drawings,
+  stockBefore:plan.stockBefore,stockAfter:stock.map(x=>({...x})),
+  boxStockBefore:plan.boxStockBefore,boxStockAfter:boxStock.map(x=>({...x})),
+  pipePlan:plan.pipePlan,boxPlan:plan.boxPlan
+ };
+ await archiveOperation('readwrite',store=>store.put(record));
+ await renderArchive();
+}
+function archiveDate(date){try{return new Date(date).toLocaleString('ru-RU');}catch(e){return date||'';}}
+let archivePage=1, archiveCount=null, archiveRenderToken=0;
+function toggleArchive(){
+ const panel=document.getElementById("archivePanel"); panel.hidden=!panel.hidden; updateArchiveToggle();
+ if(panel.hidden) document.getElementById("archivePreview")?.remove();
+ else renderArchive();
+}
+function updateArchiveToggle(){
+ const b=document.getElementById("archiveToggle"), open=!document.getElementById("archivePanel").hidden;
+ b.textContent=(open?"Скрыть архив":"Показать архив")+(archiveCount===null?"":" ("+archiveCount+")"); b.setAttribute("aria-expanded",String(open));
+}
+function moveArchivePage(delta){archivePage+=delta;renderArchive();}
+async function renderArchive(){
+ const token=++archiveRenderToken;
+ const root=document.getElementById('archiveList'),status=document.getElementById('archiveStatus');
+ if(!root)return;
+ try{
+  const q=(document.getElementById('archiveSearch').value||'').trim().toLowerCase();
+  let orders=await allArchivedOrders();
+  if(token!==archiveRenderToken)return;
+  archiveCount=orders.length;updateArchiveToggle();
+  orders.sort((a,b)=>document.getElementById('archiveSort').value==='old'?a.createdAt.localeCompare(b.createdAt):b.createdAt.localeCompare(a.createdAt));
+  const matches=orders.filter(o=>[o.id,o.client,o.phone,o.address].join(' ').toLowerCase().includes(q));
+  status.textContent=`В архиве: ${orders.length}. Найдено: ${matches.length}.`;
+  const pages=Math.max(1,Math.ceil(matches.length/10));
+  archivePage=Math.max(1,Math.min(archivePage,pages));
+  document.getElementById("archivePages").innerHTML=pages>1?`<button class="secondary" onclick="moveArchivePage(-1)" ${archivePage===1?"disabled":""}>Назад</button><span>Страница ${archivePage} из ${pages}</span><button class="secondary" onclick="moveArchivePage(1)" ${archivePage===pages?"disabled":""}>Далее</button>`:"";
+  root.innerHTML=matches.length?matches.slice((archivePage-1)*10,archivePage*10).map(o=>`
+   <div class="archive-order" style="border:1px solid #ddd;padding:14px;border-radius:9px;margin-bottom:10px">
+    <b>${escapeHtml(o.client||'Клиент не указан')}</b> · ${escapeHtml(o.id)}
+    <div class="note">${escapeHtml(archiveDate(o.createdAt))} · Проёмов: ${o.openings||0} · ${Number(o.total||0).toLocaleString('ru-RU')} ₽</div>
+    <div class="note">${escapeHtml(o.phone||'')} ${escapeHtml(o.address||'')}</div>
+    <div class="drawing-actions">
+     <button class="secondary" onclick="viewArchiveOrder('${o.id}')">Открыть чертежи</button>
+     <button class="secondary" onclick="editArchiveContact('${o.id}')">Контакты / адрес</button>
+     <button class="secondary" onclick="repeatArchiveOrder('${o.id}')">Повторить как новый</button>
+    </div>
+   </div>`).join(''):'<p class="note">Подходящих заказов нет.</p>';
+ }catch(e){if(token!==archiveRenderToken)return;archiveCount=null;updateArchiveToggle();status.textContent='Архив недоступен: '+e.message;root.innerHTML='';document.getElementById("archivePages").innerHTML="";}
+}
+async function archiveById(id){
+ const db=await openArchiveDB();
+ return new Promise((resolve,reject)=>{
+  const req=db.transaction('orders','readonly').objectStore('orders').get(id);
+  req.onsuccess=()=>resolve(req.result);
+  req.onerror=()=>reject(req.error);
+ });
+}
+async function editArchiveContact(id){
+ const o=await archiveById(id);if(!o)return;
+ const phone=prompt('Телефон клиента:',o.phone||'');if(phone===null)return;
+ const address=prompt('Адрес объекта:',o.address||'');if(address===null)return;
+ o.phone=phone.trim();o.address=address.trim();
+ await archiveOperation('readwrite',store=>store.put(o));
+ await renderArchive();
+}
+async function viewArchiveOrder(id){
+ const o=await archiveById(id);if(!o)return;
+ const container=document.getElementById('archivePreview')||document.createElement('div');
+ container.id='archivePreview';container.className='card';
+ container.innerHTML=`<h2>Заказ ${escapeHtml(o.id)} — ${escapeHtml(o.client||'Без имени')}</h2>
+ <p class="note">${escapeHtml(archiveDate(o.createdAt))} · ${Number(o.total||0).toLocaleString('ru-RU')} ₽ · ${escapeHtml(o.phone||'')} · ${escapeHtml(o.address||'')}</p>
+ <p class="note">Сохранённый склад: труба ${o.stockAfter?.length||0} кусков, бокс ${o.boxStockAfter?.length||0} кусков. Это исторический снимок, текущий склад не меняется.</p>
+ <div class="drawing-actions"><button class="secondary" type="button" onclick="document.getElementById('archivePreview').remove()">Закрыть просмотр</button></div>
+ <div class="drawings-grid">${(o.drawings||[]).map(d=>`<div class="drawing-item"><h3>${escapeHtml(d.title)}</h3>${d.svg}<p class="note">${escapeHtml(d.caption)}</p></div>`).join('')}</div>`;
+ document.getElementById('archiveSection').after(container);
+ container.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function repeatArchiveOrder(id){
+ const o=await archiveById(id);if(!o||!o.snapshot)return;
+ if(!confirm('Загрузить копию заказа в калькулятор? Текущий незавершённый расчёт будет заменён. Склады не изменятся.'))return;
+ const d=o.snapshot;
+ document.getElementById('positions').innerHTML=d.positions;
+ positionCounter=d.counter||document.querySelectorAll('#positions > .position').length;
+ for(const f of d.fields||[]){
+  if(!f.id)continue;
+  const el=document.getElementById(f.id);if(!el)continue;
+  el.value=f.value;
+  if(el.type==='checkbox')el.checked=f.checked;
+ }
+ document.querySelectorAll('.position .window-shape').forEach(updateShapeFields);
+ document.getElementById('result').innerHTML='<h2>Смета заказа</h2><p>Параметры загружены из архива. Нажми «Рассчитать смету» для актуальной стоимости и склада.</p>';
+ currentPlan=null;
+ saveDrawingDraft();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+function downloadJson(data,name){
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+async function exportCompleteBackup(){
+ try{
+  const backup={format:'soft-windows-complete-backup',version:1,createdAt:new Date().toISOString(),
+   orders:await allArchivedOrders(),stock,history,boxStock,boxHistory,financeOrders};
+  downloadJson(backup,'Мягкие_окна_полная_копия_'+new Date().toISOString().slice(0,10)+'.json');
+ }catch(e){alert('Не удалось создать копию: '+e.message);}
+}
+async function importCompleteBackup(event){
+ const file=event.target.files?.[0];if(!file)return;
+ try{
+  const b=JSON.parse(await file.text());
+  if(b.format!=='soft-windows-complete-backup'||b.version!==1||
+   !['orders','stock','history','boxStock','boxHistory','financeOrders'].every(k=>Array.isArray(b[k]))||
+   !b.orders.every(o=>o&&typeof o.id==='string'&&Array.isArray(o.drawings)))throw new Error('Неверный формат файла');
+  if(!confirm(`Восстановить ${b.orders.length} заказов? ТЕКУЩИЕ архив, склад и финансовый журнал будут ЗАМЕНЕНЫ. Продолжить?`))return;
+  // Одной транзакцией заменяем архив; после неё обновляем остальные данные.
+  await archiveOperation('readwrite',store=>{store.clear();b.orders.forEach(o=>store.put(o));});
+  stock=b.stock;history=b.history;boxStock=b.boxStock;boxHistory=b.boxHistory;financeOrders=b.financeOrders;
+  saveStock();saveHistory();saveBoxStock();saveBoxHistory();saveFinanceOrders();
+  await renderArchive();
+  alert('Архив, склады и финансовый журнал восстановлены.');
+ }catch(e){alert('Не удалось восстановить копию: '+e.message);}
+ finally{event.target.value='';}
+}
+renderArchive();
+
+// Экспорт и отправка чертежей без внешних библиотек.
+// Общий экспортный холст: SVG, номер проёма и полное пояснение под ним.
+// Текст переносится по словам, поэтому не обрезается в PDF и PNG.
+function drawingCaption(card) {
+    return (card.querySelector('p.note')?.textContent || '').replace(/\s+/g,' ').trim();
+}
+function wrapDrawingCaption(ctx, text, maxWidth) {
+    const lines=[];
+    let line='';
+    for(const word of text.split(/\s+/)) {
+        const candidate=line ? line+' '+word : word;
+        if(line && ctx.measureText(candidate).width>maxWidth){lines.push(line);line=word;}
+        else line=candidate;
+    }
+    if(line)lines.push(line);
+    return lines;
+}
+async function renderDrawingCanvas(card, multiplier=3) {
+    const svg=card.querySelector('svg');
+    if(!svg)throw new Error('Нет чертежа.');
+    const clone=svg.cloneNode(true);
+    clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+    const vb=svg.viewBox.baseVal;
+    const w=vb.width||620,h=vb.height||430;
+    clone.setAttribute('width',w);clone.setAttribute('height',h);
+    const xml=new XMLSerializer().serializeToString(clone);
+    const url=URL.createObjectURL(new Blob([xml],{type:'image/svg+xml;charset=utf-8'}));
+    try {
+        const img=await new Promise((resolve,reject)=>{
+            const i=new Image();i.onload=()=>resolve(i);i.onerror=()=>reject(new Error('Ошибка изображения SVG'));i.src=url;
+        });
+        const canvas=document.createElement('canvas');
+        const measure=canvas.getContext('2d');
+        measure.font='14px Arial, sans-serif';
+        const caption=drawingCaption(card);
+        const lines=caption ? wrapDrawingCaption(measure,caption,w-36) : [];
+        const top=32, bottom=14, lineHeight=19;
+        const extra=top+bottom+(lines.length?12+lines.length*lineHeight:0);
+        canvas.width=Math.round(w*multiplier);
+        canvas.height=Math.round((h+extra)*multiplier);
+        const ctx=canvas.getContext('2d');
+        ctx.scale(multiplier,multiplier);
+        ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h+extra);
+        ctx.font='bold 17px Arial, sans-serif';ctx.fillStyle='#243447';
+        ctx.fillText(card.querySelector('h3')?.textContent||'Чертёж',18,24);
+        ctx.drawImage(img,0,top,w,h);
+        if(lines.length){
+            ctx.font='14px Arial, sans-serif';ctx.fillStyle='#243447';
+            lines.forEach((line,i)=>ctx.fillText(line,18,top+h+19+i*lineHeight));
+        }
+        return canvas;
+    }finally{URL.revokeObjectURL(url);}
+}
+async function drawingToPng(button) {
+    const card=button.closest('.drawing-item');
+    if(!card)throw new Error('Чертёж не найден.');
+    const canvas=await renderDrawingCanvas(card);
+    const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Не удалось сохранить PNG.')),'image/png'));
+    const heading=card.querySelector('h3')?.textContent||'Чертёж';
+    const number=(heading.match(/№\s*(\d+)/)||[])[1]||'1';
+    return {blob,filename:`Чертёж_проём_${number}.png`};
+}
+async function downloadDrawing(button) {
+    saveDrawingDraft();
+    try {
+        const {blob,filename}=await drawingToPng(button);
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement("a");
+        a.href=url;a.download=filename;
+        document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),10000);
+    } catch(error) {alert("Не удалось скачать чертёж: "+error.message);}
+}
+async function shareDrawing(button) {
+    saveDrawingDraft();
+    try {
+        const {blob,filename}=await drawingToPng(button);
+        const file=new File([blob],filename,{type:"image/png"});
+        if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})) {
+            try {await navigator.share({files:[file],title:filename});}
+            catch(error) {if(error.name!=="AbortError") throw error;}
+        } else {
+            // На компьютерах и при открытии HTML через file:// передача файла может не поддерживаться.
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement("a");
+            a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+            setTimeout(()=>URL.revokeObjectURL(url),10000);
+            alert("Прямая отправка недоступна в этом браузере. Чертёж скачан в PNG — прикрепи файл к письму или сообщению.");
+        }
+    } catch(error) {alert("Не удалось поделиться чертежом: "+error.message);}
+}
+
+// Сохраняем текущий заказ перед уходом в системное меню Android.
+const DRAWING_DRAFT_KEY='softWindowsTemporaryDrawingDraftV2';
+function saveDrawingDraft() {
+    try {
+        const fields=Array.from(document.querySelectorAll('input,select,textarea')).filter(el=>!el.closest('#positions'));
+        const positionClone=document.getElementById('positions').cloneNode(true);
+        const originals=document.querySelectorAll('#positions input,#positions select,#positions textarea');
+        const copies=positionClone.querySelectorAll('input,select,textarea');
+        originals.forEach((el,i)=>{
+            const copy=copies[i];if(!copy)return;
+            if(el.type==='checkbox'||el.type==='radio'){
+                if(el.checked)copy.setAttribute('checked','');else copy.removeAttribute('checked');
+            }else if(el.tagName==='SELECT'){
+                Array.from(copy.options).forEach((option,j)=>{option.toggleAttribute("selected",el.options[j].selected);});
+            }else if(el.tagName==='TEXTAREA')copy.textContent=el.value;
+            else copy.setAttribute('value',el.value);
+        });
+        const draft={positions:positionClone.innerHTML,
+          result:document.getElementById('result').innerHTML,
+          counter:positionCounter,
+          fields:fields.map(el=>({id:el.id,value:el.value,checked:el.checked}))};
+        sessionStorage.setItem(DRAWING_DRAFT_KEY,JSON.stringify(draft));
+    } catch(e) {console.warn('Не удалось сохранить временную копию заказа',e);}
+}
+function restoreDrawingDraft() {
+    try {
+        const raw=sessionStorage.getItem(DRAWING_DRAFT_KEY);
+        if(!raw)return;
+        const d=JSON.parse(raw);
+        if(!d.positions||!d.result)return;
+        document.getElementById('positions').innerHTML=d.positions;
+        document.getElementById('result').innerHTML=d.result;
+        positionCounter=d.counter||document.querySelectorAll('#positions > .position').length;
+        for(const f of d.fields||[]){
+            if(!f.id)continue;
+            const el=document.getElementById(f.id);
+            if(!el)continue;
+            el.value=f.value;
+            if(el.type==='checkbox')el.checked=f.checked;
+        }
+        document.querySelectorAll('.position .window-shape').forEach(updateShapeFields);
+    }catch(e){console.warn('Не удалось восстановить заказ',e);}
+}
+// В PDF каждый лист A4 содержит 4 самостоятельных чертежа (сетка 2x2).
+async function drawingJpeg(card) {
+    const canvas=await renderDrawingCanvas(card);
+    const base64=canvas.toDataURL('image/jpeg',.94).split(',')[1];
+    const binary=atob(base64),bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+    return {bytes,width:canvas.width,height:canvas.height};
+}
+function buildDrawingsPdf(images) {
+    const enc=new TextEncoder(),chunks=[],offsets=[0];let length=0;
+    const append=bytes=>{chunks.push(bytes);length+=bytes.length;};
+    const str=t=>append(enc.encode(t));
+    const object=(n,header,stream)=>{
+        offsets[n]=length;str(`${n} 0 obj\n${header}`);
+        if(stream){str(`\nstream\n`);append(stream);str(`\nendstream`);}
+        str(`\nendobj\n`);
+    };
+    const pages=Math.ceil(images.length/4),total=2+pages*6;
+    str('%PDF-1.4\n');
+    object(1,'<< /Type /Catalog /Pages 2 0 R >>');
+    const pageIds=Array.from({length:pages},(_,i)=>3+i*6);
+    object(2,`<< /Type /Pages /Kids [${pageIds.map(n=>n+' 0 R').join(' ')}] /Count ${pages} >>`);
+    for(let page=0;page<pages;page++){
+        const first=3+page*6;
+        const imgList=images.slice(page*4,page*4+4);
+        const resources=imgList.map((_,i)=>`/Im${i} ${first+2+i} 0 R`).join(' ');
+        object(first,`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << ${resources} >> >> /Contents ${first+1} 0 R >>`);
+        const commands=[];
+        imgList.forEach((im,i)=>{
+            const col=i%2,row=Math.floor(i/2);
+            const boxX=25+col*277,boxY=425-row*401;
+            const maxW=267,maxH=362;
+            const ratio=Math.min(maxW/im.width,maxH/im.height);
+            const w=im.width*ratio,h=im.height*ratio;
+            const x=boxX+(maxW-w)/2,y=boxY+(maxH-h)/2;
+            commands.push(`q ${w.toFixed(3)} 0 0 ${h.toFixed(3)} ${x.toFixed(3)} ${y.toFixed(3)} cm /Im${i} Do Q`);
+        });
+        const content=enc.encode(commands.join('\n')+'\n');
+        object(first+1,`<< /Length ${content.length} >>`,content);
+        for(let i=0;i<4;i++){
+            const im=imgList[i];
+            if(im)object(first+2+i,`<< /Type /XObject /Subtype /Image /Width ${im.width} /Height ${im.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.bytes.length} >>`,im.bytes);
+            else object(first+2+i,'<< >>');
+        }
+    }
+    const start=length;
+    str(`xref\n0 ${total+1}\n0000000000 65535 f \n`);
+    for(let n=1;n<=total;n++)str(String(offsets[n]).padStart(10,'0')+' 00000 n \n');
+    str(`trailer\n<< /Size ${total+1} /Root 1 0 R >>\nstartxref\n${start}\n%%EOF`);
+    return new Blob(chunks,{type:'application/pdf'});
+}
+async function allDrawingsPdf(){
+    const cards=Array.from(document.querySelectorAll('#result .drawings-grid .drawing-item'));
+    if(!cards.length)throw new Error('Сначала рассчитай смету.');
+    const images=[];
+    for(const card of cards)images.push(await drawingJpeg(card));
+    return buildDrawingsPdf(images);
+}
+function savePdfBlob(blob,filename='Чертежи_всего_заказа_A4.pdf'){
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+async function downloadAllDrawings(){
+    saveDrawingDraft();
+    try{savePdfBlob(await allDrawingsPdf());}
+    catch(e){alert('Не удалось создать PDF: '+e.message);}
+}
+async function shareAllDrawings(){
+    saveDrawingDraft();
+    try{
+        const blob=await allDrawingsPdf();
+        const file=new File([blob],'Чертежи_всего_заказа_A4.pdf',{type:'application/pdf'});
+        if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+            try{await navigator.share({files:[file],title:'Чертежи мягких окон'});}
+            catch(e){if(e.name!=='AbortError')throw e;}
+        }else{
+            savePdfBlob(blob);
+            alert('Отправка файла напрямую недоступна. PDF скачан — прикрепи его в мессенджере или письме.');
+        }
+    }catch(e){alert('Не удалось поделиться: '+e.message);}
+}
+async function printAllDrawings(){
+    saveDrawingDraft();
+    // Открываем вкладку сразу по нажатию, иначе Android блокирует всплывающее окно после await.
+    const preview=window.open('','_blank');
+    if(preview){
+        preview.document.write('<!doctype html><html lang="ru"><meta charset="utf-8"><title>Подготовка чертежей</title><body style="font-family:Arial;padding:20px">Готовим PDF с чертежами (4 проёма на лист А4)…</body></html>');
+        preview.document.close();
+    }
+    try{
+        const pdf=await allDrawingsPdf();
+        const url=URL.createObjectURL(pdf);
+        if(preview){
+            preview.location.replace(url);
+            // PDF-предпросмотр открывается средствами Android/браузера, где доступна печать.
+            setTimeout(()=>URL.revokeObjectURL(url),120000);
+        }else{
+            savePdfBlob(pdf);
+            alert('Браузер заблокировал просмотр. PDF скачан: открой его через «Файлы» и выбери «Печать».');
+        }
+    }catch(e){if(preview)preview.close();alert('Не удалось подготовить чертежи: '+e.message);}
+}
+// Даже если Android выгрузит вкладку во время отправки, восстанавливаем заполненные поля и чертежи.
+restoreDrawingDraft();
+window.addEventListener('pagehide',saveDrawingDraft);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveDrawingDraft();});
+
+</script>
+
+<script src="./pwa.js"></script>
+</body>
+</html>

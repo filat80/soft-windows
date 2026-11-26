@@ -1,0 +1,6 @@
+(()=>{const status=document.getElementById('pwaStatus'),btn=document.getElementById('pwaInstall'),hint=document.getElementById('pwaHint');let promptEvent=null,ready=false;
+const standalone=()=>matchMedia('(display-mode: standalone)').matches;
+function update(){status.textContent=ready?'Автономный режим готов · '+(navigator.onLine?'сеть доступна':'без интернета'):'Автономный режим ещё не подготовлен';hint.hidden=standalone();btn.hidden=!promptEvent||standalone();}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();promptEvent=e;update();});btn.addEventListener('click',async()=>{if(!promptEvent)return;const p=promptEvent;promptEvent=null;try{await p.prompt();await p.userChoice;}finally{update();}});window.addEventListener('appinstalled',()=>{promptEvent=null;update();});window.addEventListener('online',update);window.addEventListener('offline',update);
+if(!('serviceWorker' in navigator)||!isSecureContext){status.textContent='Для установки нужен сайт HTTPS.';return;}
+navigator.serviceWorker.register('./sw.js').then(()=>navigator.serviceWorker.ready).then(()=>{ready=true;update();}).catch(e=>{status.textContent='Не удалось подготовить автономный режим: '+e.message;});})();
