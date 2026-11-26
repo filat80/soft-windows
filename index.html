@@ -135,7 +135,7 @@ th { background: #edf2f6; }
 <body>
 <div class="container">
 
-<h1>Калькулятор мягких окон</h1>
+<h1>Калькулятор мягких окон</h1><div class="card" id="cloudPanel"><h2>Облачная синхронизация</h2><p class="note">Вход в один аккаунт на всех устройствах. Пока обмен ручной: загрузка и восстановление полной копии.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></div>
 <div class="card" id="pwaPanel"><div id="pwaStatus" class="note" role="status">Подготовка автономного режима…</div><button class="primary" id="pwaInstall" type="button" hidden>Установить приложение</button><div class="note" id="pwaHint">В Chrome открой меню ⋮ → Установить приложение, если кнопка установки не появилась.</div></div>
 
 <div class="card">
@@ -341,7 +341,7 @@ th { background: #edf2f6; }
 
 <div class="card" id="archiveSection">
 <h2>Архив подтверждённых заказов</h2>
-<p class="note">Заказы, чертежи и параметры сохраняются в памяти этого браузера (IndexedDB), без интернета. Для переноса на другое устройство используй общую резервную копию. Облачная синхронизация пока не подключена.</p>
+<p class="note">Заказы, чертежи и параметры сохраняются в памяти этого браузера (IndexedDB), без интернета. Для переноса на другое устройство используй общую резервную копию. Облачное копирование доступно в отдельном блоке выше.</p>
 <button class="secondary" id="archiveToggle" aria-expanded="false" aria-controls="archivePanel" onclick="toggleArchive()">Показать архив</button>
 <div id="archivePanel" hidden>
 <div class="fields">
@@ -2899,5 +2899,22 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 </script>
 
 <script src="./pwa.js"></script>
-</body>
+<script>
+const CLOUD_URL='https://sckhduhtwouogxsngxmd.supabase.co';
+const CLOUD_KEY='sb_publishable_O9YLBYwiv2-mwCdGU_6PXA_WOQNDdMt';
+let cloudSession=null, cloudBusy=false;
+const cloudStatus=t=>document.getElementById('cloudStatus').textContent=t;
+async function cloudRequest(path,method='GET',body,token,extra={}){
+ const headers={apikey:CLOUD_KEY,'Content-Type':'application/json',...extra};if(token)headers.Authorization='Bearer '+token;
+ const r=await fetch(CLOUD_URL+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});const raw=await r.text();let j;try{j=JSON.parse(raw)}catch{j=raw}if(!r.ok)throw Error(j?.msg||j?.message||j?.error_description||('HTTP '+r.status));return j;
+}
+async function cloudRun(fn){if(cloudBusy)return;cloudBusy=true;try{await fn()}catch(e){cloudStatus('Ошибка: '+e.message)}finally{cloudBusy=false}}
+function cloudAuth(signup){return cloudRun(async()=>{const email=document.getElementById('cloudEmail').value.trim(),password=document.getElementById('cloudPassword').value;if(!email||!password)throw Error('Введите почту и пароль');const j=await cloudRequest(signup?'/auth/v1/signup':'/auth/v1/token?grant_type=password','POST',{email,password});document.getElementById('cloudPassword').value='';if(!j.access_token){cloudStatus('Проверьте почту, подтвердите регистрацию и войдите.');return}cloudSession=j;cloudStatus('Вход выполнен: '+email);});}
+function cloudLogout(){cloudSession=null;cloudStatus('Вход не выполнен');}
+async function cloudToken(){if(!cloudSession)throw Error('Сначала войдите');if(cloudSession.expires_at && cloudSession.expires_at<Date.now()/1000+60){cloudSession=await cloudRequest('/auth/v1/token?grant_type=refresh_token','POST',{refresh_token:cloudSession.refresh_token});}return cloudSession.access_token;}
+async function cloudSnapshot(){return {format:'soft-windows-complete-backup',version:1,createdAt:new Date().toISOString(),orders:await allArchivedOrders(),stock,history,boxStock,boxHistory,financeOrders};}
+async function cloudRead(token){return cloudRequest('/rest/v1/calculator_data?select=data,updated_at&user_id=eq.'+encodeURIComponent(cloudSession.user.id),'GET',undefined,token);}
+function cloudPush(){return cloudRun(async()=>{const token=await cloudToken(), rows=await cloudRead(token);if(!confirm(rows.length?'В облаке уже есть копия от '+new Date(rows[0].updated_at).toLocaleString('ru-RU')+'. Заменить её текущими данными?':'Сохранить текущие данные в облако?'))return;const data=await cloudSnapshot();await cloudRequest('/rest/v1/calculator_data?on_conflict=user_id','POST',{user_id:cloudSession.user.id,data,updated_at:new Date().toISOString()},token,{Prefer:'resolution=merge-duplicates,return=minimal'});cloudStatus('Копия сохранена в облаке: '+new Date().toLocaleString('ru-RU'));});}
+function cloudPull(){return cloudRun(async()=>{const token=await cloudToken(),rows=await cloudRead(token);if(!rows.length)throw Error('В облаке пока нет копии');const b=rows[0].data;if(b?.format!=='soft-windows-complete-backup'||b.version!==1||!['orders','stock','history','boxStock','boxHistory','financeOrders'].every(k=>Array.isArray(b[k]))||!b.orders.every(o=>o&&typeof o.id==='string'&&Array.isArray(o.drawings)))throw Error('Неверный формат облачной копии');if(!confirm('Заменить местные данные облачной копией? Заказов: '+b.orders.length+'. Перед заменой будет скачана резервная копия.'))return;downloadJson(await cloudSnapshot(),'До_облачного_восстановления.json');await archiveOperation('readwrite',store=>{store.clear();b.orders.forEach(o=>store.put(o));});stock=b.stock;history=b.history;boxStock=b.boxStock;boxHistory=b.boxHistory;financeOrders=b.financeOrders;saveStock();saveHistory();saveBoxStock();saveBoxHistory();saveFinanceOrders();await renderArchive();cloudStatus('Облачная копия восстановлена');});}
+</script></body>
 </html>
