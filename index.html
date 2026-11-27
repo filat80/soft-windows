@@ -135,7 +135,7 @@ th { background: #edf2f6; }
 <body>
 <div class="container">
 
-<h1>Калькулятор мягких окон</h1><div class="card" id="cloudPanel"><h2>Облачная синхронизация</h2><p class="note">Вход в один аккаунт на всех устройствах. Версия 6. Вход сохраняется на этом устройстве. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. При конфликте обмен останавливается.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button> <button onclick="exportCompleteBackup()">Скачать полную резервную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></div>
+<h1>Калькулятор мягких окон</h1><div class="card" id="cloudPanel"><h2>Облачная синхронизация</h2><p class="note">Вход в один аккаунт на всех устройствах. Версия 7. Вход сохраняется на этом устройстве. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. При конфликте обмен останавливается.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button> <button onclick="exportCompleteBackup()">Скачать полную резервную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></div>
 <div class="card" id="pwaPanel"><div id="pwaStatus" class="note" role="status">Подготовка автономного режима…</div><button class="primary" id="pwaInstall" type="button" hidden>Установить приложение</button><div class="note" id="pwaHint">В Chrome открой меню ⋮ → Установить приложение, если кнопка установки не появилась.</div></div>
 
 <div class="card">
@@ -2576,6 +2576,7 @@ async function renderArchive(){
      <button class="secondary" onclick="viewArchiveOrder('${o.id}')">Открыть чертежи</button>
      <button class="secondary" onclick="editArchiveContact('${o.id}')">Контакты / адрес</button>
      <button class="secondary" onclick="repeatArchiveOrder('${o.id}')">Повторить как новый</button>
+     <button class="secondary" style="color:#a32222" onclick="deleteSafeOrder('${o.id}')">Удалить заказ</button>
     </div>
    </div>`).join(''):'<p class="note">Подходящих заказов нет.</p>';
  }catch(e){if(token!==archiveRenderToken)return;archiveCount=null;updateArchiveToggle();status.textContent='Архив недоступен: '+e.message;root.innerHTML='';document.getElementById("archivePages").innerHTML="";}
@@ -2588,6 +2589,34 @@ async function archiveById(id){
   req.onerror=()=>reject(req.error);
  });
 }
+
+// Безопасное удаление: только заказы без финансовых и складских операций.
+function orderDeletionBlock(o,f){
+ if(!o||!f)return 'Нет связанной записи архива или финансов.';
+ if(!Array.isArray(f.payments)||!Array.isArray(f.expenses)||f.payments.length||f.expenses.length||f.closedAt||f.exportedToCoinKeeper)return 'Есть оплаты, расходы или заказ завершён.';
+ for(const [plan,before,after] of [[o.pipePlan,o.stockBefore,o.stockAfter],[o.boxPlan,o.boxStockBefore,o.boxStockAfter]]){
+  if(!plan||!Array.isArray(plan.assignments)||!Array.isArray(plan.bars)||!Array.isArray(plan.newStock)||!Array.isArray(before)||!Array.isArray(after)||plan.assignments.length||plan.bars.length||plan.newStock.length||plan.paidMeters!==0||plan.pipeCost!==0||JSON.stringify(before,syncCanonical)!==JSON.stringify(after,syncCanonical))return 'Заказ затрагивает склад или закупку. Автоматическое удаление запрещено.';
+ }
+ return '';
+}
+async function deleteSafeOrder(id){
+ if(cloudBusy||archiveWrites){alert('Дождитесь окончания текущей операции.');return;}
+ cloudBusy=true;const root=document.querySelector('.container');if(root)root.inert=true;
+ try{
+  const backup=await cloudSnapshot();const o=backup.orders.find(x=>x.id===id),f=financeOrder(id);
+  const block=orderDeletionBlock(o,f);if(block){alert(block);return;}
+  if(!confirm('Удалить заказ «'+(o.client||id)+'» на сумму '+financeMoney(o.total)+' из архива и финансового журнала? Склад не изменится. Будет создана полная защитная копия.'))return;
+  const raw=JSON.stringify(backup);if(!safeSetItem('softWindowBeforeSync',raw)||safeGetItem('softWindowBeforeSync')!==raw)throw Error('Не удалось сохранить защитную копию. Удаление отменено.');
+  downloadJson(backup,'До_удаления_'+id+'.json');
+  const previous=financeOrders,next=previous.filter(x=>x.id!==id);
+  if(!safeSetItem(FINANCE_KEY,JSON.stringify(next)))throw Error('Не удалось сохранить финансовый журнал.');
+  try{await archiveOperation('readwrite',store=>store.delete(id));}catch(e){safeSetItem(FINANCE_KEY,JSON.stringify(previous));throw e;}
+  financeOrders=next;currentPlan=null;document.getElementById('archivePreview')?.remove();document.getElementById('result').textContent='Заказ удалён. Рассчитай смету заново.';
+  renderFinance();await renderArchive();alert('Заказ удалён из архива и финансов. Склад не изменён.');
+ }catch(e){alert('Ошибка удаления: '+e.message+' Проверь архив и финансовый журнал.');}
+ finally{cloudBusy=false;if(root)root.inert=false;setTimeout(cloudAuto,0);}
+}
+
 async function editArchiveContact(id){
  const o=await archiveById(id);if(!o)return;
  const phone=prompt('Телефон клиента:',o.phone||'');if(phone===null)return;

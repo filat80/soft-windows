@@ -1,5 +1,5 @@
 const PREFIX='soft-windows-pwa-'+self.registration.scope+'-';
-const CACHE=PREFIX+'v6';
+const CACHE=PREFIX+'v7';
 const FILES=['./index.html','./manifest.webmanifest','./pwa.js','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(new URL(f,self.registration.scope),{cache:'reload'})) ))));
 self.addEventListener('activate',e=>e.waitUntil((async()=>{for(const k of await caches.keys())if(k.startsWith(PREFIX)&&k!==CACHE)await caches.delete(k);await self.clients.claim();})()));
