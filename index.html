@@ -135,7 +135,7 @@ th { background: #edf2f6; }
 <body>
 <div class="container">
 
-<h1>Калькулятор мягких окон</h1><div class="card" id="cloudPanel"><h2>Облачная синхронизация</h2><p class="note">Вход в один аккаунт на всех устройствах. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. При конфликте обмен останавливается.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></div>
+<h1>Калькулятор мягких окон</h1><div class="card" id="cloudPanel"><h2>Облачная синхронизация</h2><p class="note">Вход в один аккаунт на всех устройствах. Вход сохраняется на этом устройстве. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. При конфликте обмен останавливается.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></div>
 <div class="card" id="pwaPanel"><div id="pwaStatus" class="note" role="status">Подготовка автономного режима…</div><button class="primary" id="pwaInstall" type="button" hidden>Установить приложение</button><div class="note" id="pwaHint">В Chrome открой меню ⋮ → Установить приложение, если кнопка установки не появилась.</div></div>
 
 <div class="card">
@@ -2932,15 +2932,21 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 const CLOUD_URL='https://sckhduhtwouogxsngxmd.supabase.co';
 const CLOUD_KEY='sb_publishable_O9YLBYwiv2-mwCdGU_6PXA_WOQNDdMt';
 let cloudSession=null, cloudBusy=false;
+const CLOUD_SESSION_KEY='softWindowCloudSession:v1';
+function readCloudSession(){try{const x=JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY));return x?.access_token&&x?.refresh_token&&x?.user?.id?x:null;}catch{return null;}}
+function rememberCloudSession(j){const x={access_token:j.access_token,refresh_token:j.refresh_token,expires_at:j.expires_at||Math.floor(Date.now()/1000)+(j.expires_in||3600),user:{id:j.user.id,email:j.user.email}};localStorage.setItem(CLOUD_SESSION_KEY,JSON.stringify(x));cloudSession=x;}
+function forgetCloudSession(){localStorage.removeItem(CLOUD_SESSION_KEY);cloudSession=null;}
+function restoreCloudSession(){cloudSession=readCloudSession();if(cloudSession){document.getElementById('cloudEmail').value=cloudSession.user.email||'';cloudStatus(navigator.onLine?'Восстановление входа…':'Нет сети. Вход сохранён.');setTimeout(cloudAuto,0);}}
+async function cloudLock(fn){return navigator.locks?navigator.locks.request(CLOUD_SESSION_KEY,fn):fn();}
 const cloudStatus=t=>document.getElementById('cloudStatus').textContent=t;
 async function cloudRequest(path,method='GET',body,token,extra={}){
  const headers={apikey:CLOUD_KEY,'Content-Type':'application/json',...extra};if(token)headers.Authorization='Bearer '+token;
- const r=await fetch(CLOUD_URL+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});const raw=await r.text();let j;try{j=JSON.parse(raw)}catch{j=raw}if(!r.ok)throw Error(j?.msg||j?.message||j?.error_description||('HTTP '+r.status));return j;
+ const r=await fetch(CLOUD_URL+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});const raw=await r.text();let j;try{j=JSON.parse(raw)}catch{j=raw}if(!r.ok){const e=Error(j?.msg||j?.message||j?.error_description||('HTTP '+r.status));e.status=r.status;e.code=j?.error_code||j?.code;throw e;}return j;
 }
 async function cloudRun(fn){if(cloudBusy)return;cloudBusy=true;const root=document.querySelector('.container');if(root)root.inert=true;try{await fn()}catch(e){cloudStatus('Ошибка: '+e.message)}finally{cloudBusy=false;if(root)root.inert=false}}
-function cloudAuth(signup){return cloudRun(async()=>{const email=document.getElementById('cloudEmail').value.trim(),password=document.getElementById('cloudPassword').value;if(!email||!password)throw Error('Введите почту и пароль');const j=await cloudRequest(signup?'/auth/v1/signup':'/auth/v1/token?grant_type=password','POST',{email,password});document.getElementById('cloudPassword').value='';if(!j.access_token){cloudStatus('Проверьте почту, подтвердите регистрацию и войдите.');return}cloudSession=j;cloudStatus('Вход выполнен: '+email);setTimeout(cloudAuto,0);});}
-function cloudLogout(){if(cloudBusy)return;cloudSession=null;cloudStatus('Вход не выполнен');}
-async function cloudToken(){if(!cloudSession)throw Error('Сначала войдите');if(cloudSession.expires_at && cloudSession.expires_at<Date.now()/1000+60){cloudSession=await cloudRequest('/auth/v1/token?grant_type=refresh_token','POST',{refresh_token:cloudSession.refresh_token});}return cloudSession.access_token;}
+function cloudAuth(signup){return cloudRun(async()=>{const email=document.getElementById('cloudEmail').value.trim(),password=document.getElementById('cloudPassword').value;if(!email||!password)throw Error('Введите почту и пароль');const j=await cloudRequest(signup?'/auth/v1/signup':'/auth/v1/token?grant_type=password','POST',{email,password});document.getElementById('cloudPassword').value='';if(!j.access_token){cloudStatus('Проверьте почту, подтвердите регистрацию и войдите.');return}await cloudLock(()=>rememberCloudSession(j));cloudStatus('Вход выполнен: '+email);setTimeout(cloudAuto,0);});}
+function cloudLogout(){return cloudRun(async()=>{await cloudLock(async()=>{const old=readCloudSession();forgetCloudSession();if(old&&navigator.onLine){try{await cloudRequest('/auth/v1/logout?scope=local','POST',undefined,old.access_token);}catch{}}});cloudStatus('Вход не выполнен');});}
+async function cloudToken(){return cloudLock(async()=>{cloudSession=readCloudSession();if(!cloudSession)throw Error('Сначала войдите');if(cloudSession.expires_at<Date.now()/1000+60){try{const j=await cloudRequest('/auth/v1/token?grant_type=refresh_token','POST',{refresh_token:cloudSession.refresh_token});rememberCloudSession(j);}catch(e){if(['refresh_token_not_found','refresh_token_already_used','session_not_found','session_expired'].includes(e.code)){forgetCloudSession();throw Error('Сессия завершена. Войдите снова.');}throw e;}}return cloudSession.access_token;});}
 async function cloudSnapshot(){return {format:'soft-windows-complete-backup',version:1,createdAt:new Date().toISOString(),orders:await allArchivedOrders(),stock,history,boxStock,boxHistory,financeOrders};}
 async function cloudRead(token){return cloudRequest('/rest/v1/calculator_data?select=data,updated_at&user_id=eq.'+encodeURIComponent(cloudSession.user.id),'GET',undefined,token);}
 const syncKeys=['orders','stock','history','boxStock','boxHistory','financeOrders'];
@@ -2966,7 +2972,7 @@ async function syncApply(b,local){
 }
 function syncConflict(){cloudStatus('Конфликт или первое подключение: местная и облачная копии различаются. Автообмен остановлен. Скачайте полную копию и выберите нужную версию вручную.');}
 async function syncCycle(mode){
- if(!cloudSession||!navigator.onLine||cloudBusy||archiveWrites)return;
+ if(cloudBusy||archiveWrites)return;cloudSession=readCloudSession();if(!cloudSession||!navigator.onLine)return;
  await cloudRun(async()=>{
  const token=await cloudToken(), rows=await cloudRead(token),row=rows[0];
  const local=await cloudSnapshot(), lh=await syncHash(local), base=syncBase();
@@ -2989,6 +2995,8 @@ function cloudPush(){return syncCycle('push');}
 function cloudPull(){return syncCycle('pull');}
 function cloudAuto(){return syncCycle('auto');}
 function syncDownloadPrevious(){const raw=safeGetItem('softWindowBeforeSync');if(!raw){alert('Защитной копии пока нет');return;}downloadJson(JSON.parse(raw),'До_автосинхронизации.json');}
+window.addEventListener('storage',e=>{if(e.key===CLOUD_SESSION_KEY&&!cloudBusy){cloudSession=readCloudSession();if(!cloudSession)cloudStatus('Вход не выполнен');else {document.getElementById('cloudEmail').value=cloudSession.user.email||'';}}});
+restoreCloudSession();
 setInterval(cloudAuto,15000);
 window.addEventListener('online',cloudAuto);
 window.addEventListener('offline',()=>{if(cloudSession)cloudStatus('Нет сети. Изменения остаются на устройстве.');});
