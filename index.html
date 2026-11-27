@@ -135,7 +135,7 @@ th { background: #edf2f6; }
 <body>
 <div class="container">
 
-<h1>Калькулятор мягких окон</h1><div class="card" id="cloudPanel"><h2>Облачная синхронизация</h2><p class="note">Вход в один аккаунт на всех устройствах. Вход сохраняется на этом устройстве. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. При конфликте обмен останавливается.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></div>
+<h1>Калькулятор мягких окон</h1><div class="card" id="cloudPanel"><h2>Облачная синхронизация</h2><p class="note">Вход в один аккаунт на всех устройствах. Версия 6. Вход сохраняется на этом устройстве. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. При конфликте обмен останавливается.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button> <button onclick="exportCompleteBackup()">Скачать полную резервную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></div>
 <div class="card" id="pwaPanel"><div id="pwaStatus" class="note" role="status">Подготовка автономного режима…</div><button class="primary" id="pwaInstall" type="button" hidden>Установить приложение</button><div class="note" id="pwaHint">В Chrome открой меню ⋮ → Установить приложение, если кнопка установки не появилась.</div></div>
 
 <div class="card">
@@ -2778,7 +2778,7 @@ async function shareDrawing(button) {
 const DRAWING_DRAFT_KEY='softWindowsTemporaryDrawingDraftV2';
 function saveDrawingDraft() {
     try {
-        const fields=Array.from(document.querySelectorAll('input,select,textarea')).filter(el=>!el.closest('#positions'));
+        const fields=Array.from(document.querySelectorAll('input,select,textarea')).filter(el=>!el.closest('#positions')&&!el.closest('#cloudPanel'));
         const positionClone=document.getElementById('positions').cloneNode(true);
         const originals=document.querySelectorAll('#positions input,#positions select,#positions textarea');
         const copies=positionClone.querySelectorAll('input,select,textarea');
@@ -2951,8 +2951,9 @@ async function cloudSnapshot(){return {format:'soft-windows-complete-backup',ver
 async function cloudRead(token){return cloudRequest('/rest/v1/calculator_data?select=data,updated_at&user_id=eq.'+encodeURIComponent(cloudSession.user.id),'GET',undefined,token);}
 const syncKeys=['orders','stock','history','boxStock','boxHistory','financeOrders'];
 function syncValid(b){return b?.format==='soft-windows-complete-backup'&&b.version===1&&syncKeys.every(k=>Array.isArray(b[k]))&&b.orders.every(o=>o&&typeof o.id==='string'&&Array.isArray(o.drawings));}
-async function syncHash(b){const bytes=new TextEncoder().encode(JSON.stringify(syncKeys.map(k=>b[k])));return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');}
-function syncKey(){return 'softWindowSyncBase:'+cloudSession.user.id;}
+function syncCanonical(key,value){if(value&&typeof value==='object'&&!Array.isArray(value)){return Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]]));}return value;}
+async function syncHash(b){const bytes=new TextEncoder().encode(JSON.stringify(syncKeys.map(k=>b[k]),syncCanonical));return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');}
+function syncKey(){return 'softWindowSyncBase:v2:'+cloudSession.user.id;}
 function syncBase(){return safeGetItem(syncKey());}
 function syncMark(h){safeSetItem(syncKey(),h);if(syncBase()!==h)throw Error('Не удалось сохранить состояние синхронизации');}
 async function syncWrite(token,row,data){
