@@ -1996,7 +1996,7 @@ function calculateInternal() {
             return;
         }
         const lowerEyelets = position.querySelector(".lower-eyelets").checked;
-        drawings += makeOpeningDrawing(i + 1, width, height, quantity, zippersData, dripWidthMm, opening, bordersMm, lowerEyelets, box === "yes", pipe === "yes", shape, rightHeight, horizontalSide, customGeometry);
+        drawings += makeOpeningDrawing(i + 1, width, height, quantity, zippersData, dripWidthMm, opening, bordersMm, lowerEyelets, box === "yes", pipe === "yes", shape, rightHeight, horizontalSide, customGeometry).replace('</p></div>', ` ${strapCaption(strapCount, quantity)}</p></div>`);
 
         rows += `
             <tr>
@@ -2503,7 +2503,7 @@ async function allArchivedOrders(){
  });
 }
 function archiveFormSnapshot(){
- const fields=Array.from(document.querySelectorAll('input,select,textarea')).filter(el=>!el.closest('#positions') && el.id && el.type!=='file');
+ const fields=Array.from(document.querySelectorAll('input,select,textarea')).filter(el=>!el.closest('#positions') && el.id && el.type!=='file' && !el.closest('#cloudPanel'));
  const clone=document.getElementById('positions').cloneNode(true);
  const originals=document.querySelectorAll('#positions input,#positions select,#positions textarea');
  const copies=clone.querySelectorAll('input,select,textarea');
@@ -2591,6 +2591,30 @@ async function editArchiveContact(id){
  await archiveOperation('readwrite',store=>store.put(o));
  await renderArchive();
 }
+function strapCaption(count, quantity){
+ return `Ремни: ${count} шт. на окно${quantity>1 ? `, всего ${count*quantity} шт.` : ''}.`;
+}
+function archivedDrawingCaption(order,d){
+ const caption=d.caption||'';
+ if(/Ремни:/i.test(caption))return caption;
+ try{
+  const number=Number((d.title.match(/№\s*(\d+)/)||[])[1]);
+  const doc=new DOMParser().parseFromString(order.snapshot.positions,'text/html');
+  const pos=doc.querySelectorAll('.position')[number-1];
+  const fields=order.snapshot.fields;
+  const mode=pos.querySelector('.straps').value;
+  const quantity=Number(pos.querySelector('.quantity').value);
+  const width=Number(pos.querySelector('.width').value);
+  const manual=pos.querySelector('.strap-count').value.trim();
+  const different=fields.find(f=>f.id==='differentPipes');
+  const pipe=different?.checked ? pos.querySelector('.pipe').value : fields.find(f=>f.id==='globalPipe')?.value;
+  if(!['yes','no'].includes(mode)||!Number.isInteger(quantity)||quantity<1||!(width>0))throw Error();
+  if(mode==='yes' && manual==='' && !['yes','no'].includes(pipe))throw Error();
+  const count=mode==='no'?0:manual===''?automaticStrapCount(width/1000,pipe==='yes'):Number(manual);
+  if(!Number.isInteger(count)||count<0)throw Error();
+  return caption+' '+strapCaption(count,quantity);
+ }catch(e){return caption+' Ремни: нет сохранённых данных, уточнить перед производством.';}
+}
 async function viewArchiveOrder(id){
  const o=await archiveById(id);if(!o)return;
  const container=document.getElementById('archivePreview')||document.createElement('div');
@@ -2598,8 +2622,8 @@ async function viewArchiveOrder(id){
  container.innerHTML=`<h2>Заказ ${escapeHtml(o.id)} — ${escapeHtml(o.client||'Без имени')}</h2>
  <p class="note">${escapeHtml(archiveDate(o.createdAt))} · ${Number(o.total||0).toLocaleString('ru-RU')} ₽ · ${escapeHtml(o.phone||'')} · ${escapeHtml(o.address||'')}</p>
  <p class="note">Сохранённый склад: труба ${o.stockAfter?.length||0} кусков, бокс ${o.boxStockAfter?.length||0} кусков. Это исторический снимок, текущий склад не меняется.</p>
- <div class="drawing-actions"><button class="secondary" type="button" onclick="document.getElementById('archivePreview').remove()">Закрыть просмотр</button></div>
- <div class="drawings-grid">${(o.drawings||[]).map(d=>`<div class="drawing-item"><h3>${escapeHtml(d.title)}</h3>${d.svg}<p class="note">${escapeHtml(d.caption)}</p></div>`).join('')}</div>`;
+ <div class="drawing-actions"><button class="secondary" type="button" onclick="document.getElementById('archivePreview').remove()">Закрыть просмотр</button> <button type="button" class="secondary" onclick="downloadAllDrawings('archivePreview')">Скачать все PDF</button> <button type="button" class="secondary" onclick="shareAllDrawings('archivePreview')">Поделиться всеми PDF</button> <button type="button" class="secondary" onclick="printAllDrawings('archivePreview')">Печать</button></div>
+ <div class="drawings-grid">${(o.drawings||[]).map(d=>`<div class="drawing-item"><h3>${escapeHtml(d.title)}</h3>${d.svg}<div class="drawing-actions"><button type="button" class="secondary" onclick="downloadDrawing(this)">Скачать PNG</button><button type="button" class="secondary" onclick="shareDrawing(this)">Поделиться</button></div><p class="note">${escapeHtml(archivedDrawingCaption(o,d))}</p></div>`).join('')}</div>`;
  document.getElementById('archiveSection').after(container);
  container.scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -2716,7 +2740,7 @@ async function drawingToPng(button) {
     return {blob,filename:`Чертёж_проём_${number}.png`};
 }
 async function downloadDrawing(button) {
-    saveDrawingDraft();
+    if(!button.closest("#archivePreview"))saveDrawingDraft();
     try {
         const {blob,filename}=await drawingToPng(button);
         const url=URL.createObjectURL(blob);
@@ -2727,7 +2751,7 @@ async function downloadDrawing(button) {
     } catch(error) {alert("Не удалось скачать чертёж: "+error.message);}
 }
 async function shareDrawing(button) {
-    saveDrawingDraft();
+    if(!button.closest("#archivePreview"))saveDrawingDraft();
     try {
         const {blob,filename}=await drawingToPng(button);
         const file=new File([blob],filename,{type:"image/png"});
@@ -2839,8 +2863,8 @@ function buildDrawingsPdf(images) {
     str(`trailer\n<< /Size ${total+1} /Root 1 0 R >>\nstartxref\n${start}\n%%EOF`);
     return new Blob(chunks,{type:'application/pdf'});
 }
-async function allDrawingsPdf(){
-    const cards=Array.from(document.querySelectorAll('#result .drawings-grid .drawing-item'));
+async function allDrawingsPdf(section='result'){
+    const cards=Array.from(document.getElementById(section).querySelectorAll('.drawings-grid .drawing-item'));
     if(!cards.length)throw new Error('Сначала рассчитай смету.');
     const images=[];
     for(const card of cards)images.push(await drawingJpeg(card));
@@ -2851,15 +2875,15 @@ function savePdfBlob(blob,filename='Чертежи_всего_заказа_A4.pd
     a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
-async function downloadAllDrawings(){
-    saveDrawingDraft();
-    try{savePdfBlob(await allDrawingsPdf());}
+async function downloadAllDrawings(section='result'){
+    if(section==='result')saveDrawingDraft();
+    try{savePdfBlob(await allDrawingsPdf(section));}
     catch(e){alert('Не удалось создать PDF: '+e.message);}
 }
-async function shareAllDrawings(){
-    saveDrawingDraft();
+async function shareAllDrawings(section='result'){
+    if(section==='result')saveDrawingDraft();
     try{
-        const blob=await allDrawingsPdf();
+        const blob=await allDrawingsPdf(section);
         const file=new File([blob],'Чертежи_всего_заказа_A4.pdf',{type:'application/pdf'});
         if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
             try{await navigator.share({files:[file],title:'Чертежи мягких окон'});}
@@ -2870,8 +2894,8 @@ async function shareAllDrawings(){
         }
     }catch(e){alert('Не удалось поделиться: '+e.message);}
 }
-async function printAllDrawings(){
-    saveDrawingDraft();
+async function printAllDrawings(section='result'){
+    if(section==='result')saveDrawingDraft();
     // Открываем вкладку сразу по нажатию, иначе Android блокирует всплывающее окно после await.
     const preview=window.open('','_blank');
     if(preview){
@@ -2879,7 +2903,7 @@ async function printAllDrawings(){
         preview.document.close();
     }
     try{
-        const pdf=await allDrawingsPdf();
+        const pdf=await allDrawingsPdf(section);
         const url=URL.createObjectURL(pdf);
         if(preview){
             preview.location.replace(url);
