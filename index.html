@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Калькулятор мягких окон</title>
+<title>Калькулятор мягких окон · версия 8</title>
 <style>
 * { box-sizing: border-box; }
 body {
@@ -135,7 +135,7 @@ th { background: #edf2f6; }
 <body>
 <div class="container">
 
-<h1>Калькулятор мягких окон</h1><div class="card" id="cloudPanel"><h2>Облачная синхронизация</h2><p class="note">Вход в один аккаунт на всех устройствах. Версия 7. Вход сохраняется на этом устройстве. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. При конфликте обмен останавливается.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button> <button onclick="exportCompleteBackup()">Скачать полную резервную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></div>
+<h1>Калькулятор мягких окон <small style="font-size:0.5em">v8.1</small></h1><div class="card"><div id="cloudCompact" role="status" style="overflow-wrap:anywhere">Вход не выполнен</div><details id="cloudPanel"><summary style="cursor:pointer;margin-top:8px">Облачная синхронизация — настройки</summary><p class="note">Вход в один аккаунт на всех устройствах. Версия 8.1. Вход сохраняется на этом устройстве. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. Независимые заказы объединяются; неоднозначные изменения требуют проверки.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button> <button onclick="exportCompleteBackup()">Скачать полную резервную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></details></div>
 <div class="card" id="pwaPanel"><div id="pwaStatus" class="note" role="status">Подготовка автономного режима…</div><button class="primary" id="pwaInstall" type="button" hidden>Установить приложение</button><div class="note" id="pwaHint">В Chrome открой меню ⋮ → Установить приложение, если кнопка установки не появилась.</div></div>
 
 <div class="card">
@@ -143,9 +143,9 @@ th { background: #edf2f6; }
 
 <label for="globalBase">Основание для всего заказа</label>
 <select id="globalBase">
-    <option value="wood">Дерево — 500 ₽/м²</option>
-    <option value="metal">Металл — 700 ₽/м²</option>
-    <option value="brick">Кирпич — 800 ₽/м²</option>
+    <option value="wood">Дерево</option>
+    <option value="metal">Металл</option>
+    <option value="brick">Кирпич</option>
 </select>
 
 <div class="checkbox-line">
@@ -218,6 +218,7 @@ th { background: #edf2f6; }
     <div><label for="zipperPrice">Молния, ₽/пог. м</label><input id="zipperPrice" type="number" min="0" step="1" value="1000"></div>
     <div><label for="strapPrice">Ремни, ₽/шт.</label><input id="strapPrice" type="number" min="0" step="1" value="100"></div>
 </div>
+<h3>Монтаж, ₽/м²</h3><div class="fields"><div><label for="mount_wood">Дерево</label><input id="mount_wood" type="number" min="0" step="1" value="500"></div><div><label for="mount_metal">Металл</label><input id="mount_metal" type="number" min="0" step="1" value="700"></div><div><label for="mount_brick">Кирпич</label><input id="mount_brick" type="number" min="0" step="1" value="800"></div></div>
 <p class="note">Для отдельного проёма можно задать индивидуальную цену через кнопку «Изменить цены проёма».</p>
 </div>
 </div>
@@ -933,9 +934,9 @@ function addPosition() {
             <div class="individual-base hidden">
                 <label>Основание монтажа</label>
                 <select class="base">
-                    <option value="wood">Дерево — 500 ₽/м²</option>
-                    <option value="metal">Металл — 700 ₽/м²</option>
-                    <option value="brick">Кирпич — 800 ₽/м²</option>
+                    <option value="wood">Дерево</option>
+                    <option value="metal">Металл</option>
+                    <option value="brick">Кирпич</option>
                 </select>
             </div>
 
@@ -963,6 +964,7 @@ function addPosition() {
     `;
 
     document.getElementById("positions").appendChild(position);
+    ensureMountFields();
     updateModes();
     updateEyeletFields(position.querySelector(".opening"));
 }
@@ -990,6 +992,27 @@ function toggleGlobalPrices() {
     button.setAttribute("aria-expanded", String(opened));
 }
 
+function ensureMountFields() {
+    document.querySelectorAll('#positions > .position').forEach(p => {
+        if(p.querySelector('.mount-custom-price')) return;
+        const anchor=p.querySelector('.custom-price')?.closest('.position-price-field');
+        if(!anchor) return;
+        anchor.insertAdjacentHTML('afterend', '<div class="position-price-field hidden"><label>Монтаж, ₽/м² (пусто = тариф основания)</label><input class="mount-custom-price" type="number" min="0" step="1" placeholder="По общему тарифу"></div>');
+        updatePositionPriceFields(p);
+    });
+    refreshMountLabels();
+}
+function refreshMountLabels() {
+    document.querySelectorAll('#globalBase, #positions .base').forEach(select => {
+        for(const option of select.options) {
+            const field=document.getElementById('mount_'+option.value);
+            if(field) option.textContent=baseNames[option.value]+' — '+(field.value===''?'—':field.value)+' ₽/м²';
+        }
+    });
+}
+function resetMountRates() {
+    for(const [key,value] of Object.entries(basePrices)) document.getElementById('mount_'+key).value=value;
+}
 function togglePositionPrices(button) {
     const position = button.closest(".position");
     const opened = position.dataset.pricesOpen !== "true";
@@ -1770,6 +1793,9 @@ function calculateInternal() {
     const globalPipe = document.getElementById("globalPipe").value;
     const globalBox = document.getElementById("globalBox").value;
 
+    ensureMountFields();
+    const mountRates = Object.fromEntries(Object.keys(basePrices).map(k=>{const v=document.getElementById('mount_'+k).value.trim();return [k,v===''?NaN:Number(v)];}));
+    if(Object.values(mountRates).some(v=>!Number.isFinite(v)||v<0)){alert('Проверь общие тарифы монтажа.');return;}
     const currentPrices = {
         pvc: Number(document.getElementById("pricePvc").value),
         screen: Number(document.getElementById("priceScreen").value)
@@ -1917,7 +1943,10 @@ function calculateInternal() {
             return;
         }
         const manufacturing = manufacturingArea * pricePerSquareMeter;
-        const installation = installationArea * basePrices[base];
+        const mountText = position.querySelector('.mount-custom-price')?.value.trim() || '';
+        const mountRate = mountText === '' ? mountRates[base] : Number(mountText);
+        if (!Number.isFinite(mountRate) || mountRate < 0) { alert(`Проверь цену монтажа в проёме №${i+1}.`); return; }
+        const installation = installationArea * mountRate;
 
         const zipperCountText = position.querySelector(".zipper-count").value.trim();
         const zipperCount = Number(zipperCountText);
@@ -2007,7 +2036,7 @@ function calculateInternal() {
                 <td>${openingNames[opening]}</td>
                 <td>${pricePerSquareMeter.toLocaleString("ru-RU")} ₽/м²</td>
                 <td>${Math.round(manufacturing).toLocaleString("ru-RU")} ₽</td>
-                <td>${baseNames[base]}</td>
+                <td>${baseNames[base]} · ${mountRate.toLocaleString("ru-RU")} ₽/м²</td>
                 <td>${Math.round(installation).toLocaleString("ru-RU")} ₽</td>
                 <td>${pipe === "yes" ? "Да" : "Нет"}</td>
                 <td>${box === "yes" ? "Да" : "Нет"}</td>
@@ -2445,6 +2474,7 @@ function resetCalculator() {
     document.getElementById("priceScreen").value = "2200";
     document.getElementById("zipperPrice").value = "1000";
     document.getElementById("strapPrice").value = "100";
+    resetMountRates();
     document.getElementById("globalBase").value = "wood";
     document.getElementById("differentBases").checked = false;
     document.getElementById("globalPipe").value = "yes";
@@ -2665,6 +2695,7 @@ async function repeatArchiveOrder(id){
  const o=await archiveById(id);if(!o||!o.snapshot)return;
  if(!confirm('Загрузить копию заказа в калькулятор? Текущий незавершённый расчёт будет заменён. Склады не изменятся.'))return;
  const d=o.snapshot;
+ resetMountRates();
  document.getElementById('positions').innerHTML=d.positions;
  positionCounter=d.counter||document.querySelectorAll('#positions > .position').length;
  for(const f of d.fields||[]){
@@ -2673,6 +2704,7 @@ async function repeatArchiveOrder(id){
   el.value=f.value;
   if(el.type==='checkbox')el.checked=f.checked;
  }
+ ensureMountFields();
  document.querySelectorAll('.position .window-shape').forEach(updateShapeFields);
  document.getElementById('result').innerHTML='<h2>Смета заказа</h2><p>Параметры загружены из архива. Нажми «Рассчитать смету» для актуальной стоимости и склада.</p>';
  currentPlan=null;
@@ -2843,7 +2875,8 @@ function restoreDrawingDraft() {
             el.value=f.value;
             if(el.type==='checkbox')el.checked=f.checked;
         }
-        document.querySelectorAll('.position .window-shape').forEach(updateShapeFields);
+        ensureMountFields();
+ document.querySelectorAll('.position .window-shape').forEach(updateShapeFields);
     }catch(e){console.warn('Не удалось восстановить заказ',e);}
 }
 // В PDF каждый лист A4 содержит 4 самостоятельных чертежа (сетка 2x2).
@@ -2951,6 +2984,10 @@ async function printAllDrawings(section='result'){
 }
 // Даже если Android выгрузит вкладку во время отправки, восстанавливаем заполненные поля и чертежи.
 restoreDrawingDraft();
+ensureMountFields();
+document.addEventListener('input',e=>{
+ if(e.target.id.startsWith('mount_')||e.target.classList.contains('mount-custom-price')){currentPlan=null;refreshMountLabels();}
+});
 window.addEventListener('pagehide',saveDrawingDraft);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveDrawingDraft();});
 
@@ -2967,7 +3004,7 @@ function rememberCloudSession(j){const x={access_token:j.access_token,refresh_to
 function forgetCloudSession(){localStorage.removeItem(CLOUD_SESSION_KEY);cloudSession=null;}
 function restoreCloudSession(){cloudSession=readCloudSession();if(cloudSession){document.getElementById('cloudEmail').value=cloudSession.user.email||'';cloudStatus(navigator.onLine?'Восстановление входа…':'Нет сети. Вход сохранён.');setTimeout(cloudAuto,0);}}
 async function cloudLock(fn){return navigator.locks?navigator.locks.request(CLOUD_SESSION_KEY,fn):fn();}
-const cloudStatus=t=>document.getElementById('cloudStatus').textContent=t;
+const cloudStatus=t=>{document.getElementById('cloudStatus').textContent=t;document.getElementById('cloudCompact').textContent=t;};
 async function cloudRequest(path,method='GET',body,token,extra={}){
  const headers={apikey:CLOUD_KEY,'Content-Type':'application/json',...extra};if(token)headers.Authorization='Bearer '+token;
  const r=await fetch(CLOUD_URL+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});const raw=await r.text();let j;try{j=JSON.parse(raw)}catch{j=raw}if(!r.ok){const e=Error(j?.msg||j?.message||j?.error_description||('HTTP '+r.status));e.status=r.status;e.code=j?.error_code||j?.code;throw e;}return j;
@@ -2984,7 +3021,36 @@ function syncCanonical(key,value){if(value&&typeof value==='object'&&!Array.isAr
 async function syncHash(b){const bytes=new TextEncoder().encode(JSON.stringify(syncKeys.map(k=>b[k]),syncCanonical));return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');}
 function syncKey(){return 'softWindowSyncBase:v2:'+cloudSession.user.id;}
 function syncBase(){return safeGetItem(syncKey());}
-function syncMark(h){safeSetItem(syncKey(),h);if(syncBase()!==h)throw Error('Не удалось сохранить состояние синхронизации');}
+async function syncDigest(v){const bytes=new TextEncoder().encode(JSON.stringify(v,syncCanonical));return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');}
+function syncPairs(b){const m=new Map();for(const k of ['orders','financeOrders'])for(const x of b[k]){if(!x||typeof x.id!=='string')throw Error('Некорректный номер заказа');if(!m.has(x.id))m.set(x.id,{});const pair=m.get(x.id);if(pair[k])throw Error('Повтор номера заказа');pair[k]=x;}return m;}
+async function syncMeta(b,h){const pairs=[];for(const [id,p] of syncPairs(b))pairs.push([id,await syncDigest(p)]);const fields={};for(const k of ['stock','boxStock','history','boxHistory'])fields[k]={hash:await syncDigest(b[k]),length:b[k].length};return {h,pairs,fields};}
+async function syncMark(h,b){const meta=JSON.stringify(await syncMeta(b,h));if(!safeSetItem(syncKey()+':merge8',meta))throw Error('Нет места для базы объединения');safeSetItem(syncKey(),h);if(syncBase()!==h)throw Error('Не удалось сохранить состояние синхронизации');}
+function syncMetaRead(h){try{const m=JSON.parse(safeGetItem(syncKey()+':merge8'));return m?.h===h?m:null;}catch{return null;}}
+async function syncMerge(local,remote,base){
+ if(!base)return null;
+ const lm=syncPairs(local),rm=syncPairs(remote),bm=new Map(base.pairs),out={...local,createdAt:new Date().toISOString(),orders:[],financeOrders:[]};
+ for(const id of [...new Set([...lm.keys(),...rm.keys(),...bm.keys()])].sort()){
+  const l=lm.get(id),r=rm.get(id),b=bm.get(id)||null,lh=l?await syncDigest(l):null,rh=r?await syncDigest(r):null;
+  let p;if(lh===rh)p=l;else if(lh===b)p=r;else if(rh===b)p=l;else return null;
+  if(p){if(!p.orders||!p.financeOrders)return null;out.orders.push(p.orders);out.financeOrders.push(p.financeOrders);}
+ }
+ // Never combine competing stock movements. History can be joined only for append-only no-material orders.
+ for(const [sk,hk] of [['stock','history'],['boxStock','boxHistory']]){
+  const ls=await syncDigest(local[sk]),rs=await syncDigest(remote[sk]),bs=base.fields[sk].hash;
+  const lh=await syncDigest(local[hk]),rh=await syncDigest(remote[hk]),bh=base.fields[hk].hash;
+  if(ls===rs&&lh===rh){out[sk]=local[sk];out[hk]=local[hk];}
+  else if(ls===bs&&lh===bh){out[sk]=remote[sk];out[hk]=remote[hk];}
+  else if(rs===bs&&rh===bh){out[sk]=local[sk];out[hk]=local[hk];}
+  else if(ls===bs&&rs===bs){
+   const n=base.fields[hk].length,la=local[hk],ra=remote[hk];if(la.length<n||ra.length<n)return null;
+   const lp=la.slice(0,la.length-n),rp=ra.slice(0,ra.length-n);
+   if(await syncDigest(la.slice(la.length-n))!==bh||await syncDigest(ra.slice(ra.length-n))!==bh)return null;
+   if(![...lp,...rp].every(x=>x.type==='Заказ'&&x.details==='Списано со склада: нет. Новые остатки: нет'))return null;
+   out[sk]=local[sk];out[hk]=[...lp,...rp,...la.slice(la.length-n)];
+  }else return null;
+ }
+ return out;
+}
 async function syncWrite(token,row,data){
  const id=cloudSession.user.id, updated_at=new Date().toISOString();
  const result=row?await cloudRequest('/rest/v1/calculator_data?user_id=eq.'+encodeURIComponent(id)+'&updated_at=eq.'+encodeURIComponent(row.updated_at),'PATCH',{data,updated_at},token,{Prefer:'return=representation'}):await cloudRequest('/rest/v1/calculator_data','POST',{user_id:id,data,updated_at},token,{Prefer:'return=representation'});
@@ -3008,16 +3074,23 @@ async function syncCycle(mode){
  const local=await cloudSnapshot(), lh=await syncHash(local), base=syncBase();
  if(row&&!syncValid(row.data))throw Error('Неверный формат облачной копии');
  const rh=row?await syncHash(row.data):null;
- if(lh===rh){syncMark(lh);cloudStatus('Синхронизировано · '+new Date().toLocaleTimeString('ru-RU'));return;}
+ if(lh===rh){await syncMark(lh,local);cloudStatus('Синхронизировано · '+new Date().toLocaleTimeString('ru-RU'));return;}
  let push=mode==='push',pull=mode==='pull';
  if(push||pull){if(!confirm(push?'Заменить облачную копию местной?':'Заменить местную копию облачной?'))return;downloadJson(push&&row?row.data:local,'До_синхронизации.json');}
  else if(!row&&!base){push=true;}
  else if(base&&rh===base){push=true;}
  else if(base&&lh===base&&row){pull=true;}
- else {syncConflict();return;}
+ else {
+  const merged=row&&base?await syncMerge(local,row.data,syncMetaRead(base)):null;
+  if(!merged){syncConflict();return;}
+  if(await syncHash(await cloudSnapshot())!==lh)throw Error('Местные данные изменились. Повторите проверку.');
+  const raw=JSON.stringify(local);if(!safeSetItem('softWindowBeforeSync',raw)||safeGetItem('softWindowBeforeSync')!==raw)throw Error('Нет места для защитной копии');
+  await syncWrite(token,row,merged);await syncApply(merged,local);await syncMark(await syncHash(merged),merged);
+  cloudStatus('Синхронизировано · заказы объединены · '+new Date().toLocaleTimeString('ru-RU'));return;
+ }
  if(await syncHash(await cloudSnapshot())!==lh)throw Error('Местные данные изменились. Повторите проверку.');
- if(push){await syncWrite(token,row,local);syncMark(lh);}
- if(pull){if(!row)throw Error('В облаке нет копии');await syncApply(row.data,local);syncMark(rh);}
+ if(push){await syncWrite(token,row,local);await syncMark(lh,local);}
+ if(pull){if(!row)throw Error('В облаке нет копии');await syncApply(row.data,local);await syncMark(rh,row.data);}
  cloudStatus('Синхронизировано · '+new Date().toLocaleTimeString('ru-RU'));
  });
 }
