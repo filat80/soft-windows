@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Калькулятор мягких окон · версия 8</title>
+<title>Калькулятор мягких окон · версия 8.2</title>
 <style>
 * { box-sizing: border-box; }
 body {
@@ -135,7 +135,7 @@ th { background: #edf2f6; }
 <body>
 <div class="container">
 
-<h1>Калькулятор мягких окон <small style="font-size:0.5em">v8.1</small></h1><div class="card"><div id="cloudCompact" role="status" style="overflow-wrap:anywhere">Вход не выполнен</div><details id="cloudPanel"><summary style="cursor:pointer;margin-top:8px">Облачная синхронизация — настройки</summary><p class="note">Вход в один аккаунт на всех устройствах. Версия 8.1. Вход сохраняется на этом устройстве. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. Независимые заказы объединяются; неоднозначные изменения требуют проверки.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button> <button onclick="exportCompleteBackup()">Скачать полную резервную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></details></div>
+<h1>Калькулятор мягких окон <small style="font-size:0.5em">v8.2</small></h1><div class="card"><div id="cloudCompact" role="status" style="overflow-wrap:anywhere">Вход не выполнен</div><details id="cloudPanel"><summary style="cursor:pointer;margin-top:8px">Облачная синхронизация — настройки</summary><p class="note">Вход в один аккаунт на всех устройствах. Версия 8.2. Вход сохраняется на этом устройстве. После входа — автоматический обмен каждые 15 секунд и при восстановлении связи. Независимые заказы объединяются; неоднозначные изменения требуют проверки.</p><div class="fields"><label>Электронная почта<input id="cloudEmail" type="email" autocomplete="username"></label><label>Пароль<input id="cloudPassword" type="password" autocomplete="current-password"></label></div><button onclick="cloudAuth(false)">Войти</button> <button onclick="cloudAuth(true)">Регистрация</button> <button onclick="cloudLogout()">Выйти</button><p><button onclick="cloudPush()">Сохранить в облако</button> <button onclick="cloudPull()">Получить из облака</button> <button onclick="syncDownloadPrevious()">Скачать защитную копию</button> <button onclick="exportCompleteBackup()">Скачать полную резервную копию</button></p><div id="cloudStatus" class="status" role="status">Вход не выполнен</div></details></div>
 <div class="card" id="pwaPanel"><div id="pwaStatus" class="note" role="status">Подготовка автономного режима…</div><button class="primary" id="pwaInstall" type="button" hidden>Установить приложение</button><div class="note" id="pwaHint">В Chrome открой меню ⋮ → Установить приложение, если кнопка установки не появилась.</div></div>
 
 <div class="card">
@@ -1794,7 +1794,21 @@ function calculateInternal() {
     const globalBox = document.getElementById("globalBox").value;
 
     ensureMountFields();
-    const mountRates = Object.fromEntries(Object.keys(basePrices).map(k=>{const v=document.getElementById('mount_'+k).value.trim();return [k,v===''?NaN:Number(v)];}));
+    // Восстанавливаем стандартные значения только для пустых полей.
+    for (const p of positions) {
+        const pipe = differentPipes ? p.querySelector('.pipe').value : globalPipe;
+        const box = differentBoxes ? p.querySelector('.box').value : globalBox;
+        const defaults = {'.border-left':50,'.border-right':50,'.border-top':box==='yes'?80:50,'.border-bottom':pipe==='yes'?60:50,'.drip-width':50,'.zipper-count':0};
+        for (const [selector, value] of Object.entries(defaults)) {
+            const field = p.querySelector(selector);
+            if (field.value === '' && !field.validity.badInput) {
+                // Не теряем сохранённые параметры молний при пустом счётчике.
+                field.value = selector === '.zipper-count' ? p.querySelectorAll('.zipper-item').length : value;
+                if (selector === '.border-top' || selector === '.border-bottom') delete field.dataset.manual;
+            }
+        }
+    }
+    const mountRates = Object.fromEntries(Object.keys(basePrices).map(k=>{const v=document.getElementById('mount_'+k).value.trim();return [k,v===''&&!document.getElementById('mount_'+k).validity.badInput?basePrices[k]:v===''?NaN:Number(v)];}));
     if(Object.values(mountRates).some(v=>!Number.isFinite(v)||v<0)){alert('Проверь общие тарифы монтажа.');return;}
     const currentPrices = {
         pvc: Number(document.getElementById("pricePvc").value),
@@ -1944,13 +1958,13 @@ function calculateInternal() {
         }
         const manufacturing = manufacturingArea * pricePerSquareMeter;
         const mountText = position.querySelector('.mount-custom-price')?.value.trim() || '';
-        const mountRate = mountText === '' ? mountRates[base] : Number(mountText);
+        const mountRate = position.querySelector('.mount-custom-price')?.validity.badInput ? NaN : mountText === '' ? mountRates[base] : Number(mountText);
         if (!Number.isFinite(mountRate) || mountRate < 0) { alert(`Проверь цену монтажа в проёме №${i+1}.`); return; }
         const installation = installationArea * mountRate;
 
         const zipperCountText = position.querySelector(".zipper-count").value.trim();
         const zipperCount = Number(zipperCountText);
-        if (zipperCountText === "" || !Number.isInteger(zipperCount) || zipperCount < 0 || zipperCount > 1000) {
+        if (position.querySelector(".zipper-count").validity.badInput || zipperCountText === "" || !Number.isInteger(zipperCount) || zipperCount < 0 || zipperCount > 1000) {
             alert(`Проверь количество молний в проёме №${i + 1}.`);
             return;
         }
